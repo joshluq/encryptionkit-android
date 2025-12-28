@@ -1,4 +1,4 @@
-name: Publish Monitorkit Snapshot
+name: Publish Encriptionkit Snapshot
 
 on:
   push:
