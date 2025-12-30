@@ -10,8 +10,7 @@ Encryptionkit is a high-performance, security-focused library for Android design
 - **Authenticated Encryption**: Uses **AES-GCM (256-bit)** by default to ensure both data confidentiality and integrity (AEAD).
 - **Zero-Trust Memory**: Optimized handling of sensitive data using **`SecureBytes`** to explicitly wipe data from memory after use.
 - **Asymmetric Encryption**: Support for **RSA-OAEP (SHA-256)** with optional **Public Key Pinning** to prevent Man-in-the-Middle attacks.
-- **Advanced Key Management**: Automatic generation and storage of keys within the Android Keystore with restricted purposes.
-- **Biometric Integration**: Built-in support for `BiometricPrompt` to protect key usage with mandatory user authentication.
+- **Asynchronous API**: Non-blocking operations using Coroutines and Callbacks for a smooth UI experience.
 - **Clean Architecture**: Decoupled design with a simplified Builder pattern, removing the need for dependency injection frameworks in the consumer app.
 
 ## 🏗 Architecture
@@ -26,9 +25,9 @@ graph TD
     end
 
     subgraph "Domain Layer (Pure Kotlin)"
-        UC[UseCases (Encrypt/Decrypt)]
+        UC["UseCases (Encrypt/Decrypt)"]
         RepoInterface[EncryptionRepository]
-        Models[SecureBytes, CryptoResult]
+        Models["SecureBytes, CryptoResult"]
     end
 
     subgraph "Data Layer (Implementation)"
@@ -39,7 +38,7 @@ graph TD
 
     subgraph "Android System"
         KS[Android Keystore System]
-        TEE[TEE / StrongBox]
+        TEE["TEE / StrongBox"]
     end
 
     Builder -- constructs --> Facade
@@ -66,33 +65,40 @@ val encryptionManager = EncryptionkitManager.Builder()
 ```
 
 ### 2. Encrypt Sensitive Data (Securely)
-Use `SecureBytes` to ensure sensitive data is wiped from memory after the operation.
+Use `SecureBytes` to ensure sensitive data is wiped from memory. Operations are asynchronous.
 
 ```kotlin
 val sensitiveData = "Top Secret".toByteArray()
 val secureBytes = SecureBytes(sensitiveData)
 
-try {
-    // The 'use' block automatically calls .close() to wipe memory
-    val result = secureBytes.use { secure ->
-        encryptionManager.encrypt(secure)
+encryptionManager.encrypt(
+    secureData = secureBytes,
+    onSuccess = { result ->
+        // 'result' contains ciphertext and IV
+        // IMPORTANT: Wipe memory after success
+        secureBytes.close()
+    },
+    onError = { error ->
+        // Handle error (e.g., CryptoException.Reason.USER_NOT_AUTHENTICATED)
+        secureBytes.close()
     }
-    // 'result' contains ciphertext and IV
-} catch (e: CryptoException) {
-    // Handle error (e.g., Key Invalidated)
-}
+)
 ```
 
 ### 3. Decrypt
-Retrieve the original information.
+Retrieve the original information using the stored ciphertext and IV.
 
 ```kotlin
-try {
-    val decryptedBytes = encryptionManager.decrypt(result.ciphertext, result.iv)
-    val originalString = String(decryptedBytes)
-} catch (e: CryptoException) {
-    // Handle decryption errors (integrity check failed)
-}
+encryptionManager.decrypt(
+    ciphertext = encryptedBytes,
+    iv = iv,
+    onSuccess = { decryptedBytes ->
+        val originalString = String(decryptedBytes)
+    },
+    onError = { error ->
+        // Handle decryption errors (integrity check failed)
+    }
+)
 ```
 
 ### 4. Asymmetric Encryption (RSA) with Pinning
@@ -100,17 +106,21 @@ Encrypt data for a backend server using its public key.
 
 ```kotlin
 val builder = EncryptionkitManager.Builder()
-    .setCertificatePathProvider(MyCertProvider()) // Implements CertificatePathProvider
-    .setPublicKeyPinning("a1b2c3d4...") // Expected SHA-256 hash of the Public Key
+    .setCertificatePathProvider(MyCertProvider())
+    .setPublicKeyPinning("a1b2c3d4...") // Fingerprint validation
     .build()
 
-val encryptedPayload = builder.encryptWithPublicKey(data)
+builder.encryptWithPublicKey(
+    data = payload,
+    onSuccess = { encrypted -> /* Send to server */ },
+    onError = { e -> /* Handle MITM or loading error */ }
+)
 ```
 
 ## 📂 Project Structure
 
 - `:library` (`es.joshluq.encryptionkit`)
-    - `sdk`: Public API Facade and Builder.
+    - `sdk`: Public API Facade (`EncryptionkitManager`) and Builder.
     - `domain`: Pure Kotlin business logic (`model`, `usecase`, `repository`, `provider`).
     - `data`: Android-specific implementations (`datasource`, `repository impl`).
 - `:showcase`: A sample app demonstrating all features, including TEE verification and secure memory usage.
@@ -119,7 +129,7 @@ val encryptedPayload = builder.encryptWithPublicKey(data)
 
 - **Compliance**: Strictly follows **NIST** and **Android Security** best practices.
 - **KDocs**: 100% complete API documentation.
-- **Testing**: Comprehensive suite of unit tests for cryptographic logic and instrumented tests (AndroidTests) for Keystore validation.
+- **Testing**: Comprehensive suite of unit tests for all layers (SDK, Domain, Data).
 
 ---
 
