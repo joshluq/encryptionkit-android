@@ -1,18 +1,12 @@
 package es.joshluq.encryptionkit.domain.usecase
 
-import es.joshluq.encryptionkit.domain.EncryptionkitConfigProvider
-import es.joshluq.encryptionkit.domain.KeyRepository
-import es.joshluq.encryptionkit.domain.SecurityLevel
-import javax.inject.Inject
+import es.joshluq.encryptionkit.domain.model.SecurityLevel
+import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 
-/**
- * Use case to retrieve the security level of the current key.
- */
-class GetSecurityLevelUseCase @Inject constructor(
-    private val keyRepository: KeyRepository,
-    private val configProvider: EncryptionkitConfigProvider
+class GetSecurityLevelUseCase(
+    private val repository: EncryptionRepository
 ) {
-    operator fun invoke(): SecurityLevel {
-        return keyRepository.getSecurityLevel(configProvider.config.alias)
+    operator fun invoke(alias: String): SecurityLevel {
+        return repository.getSecurityLevel(alias)
     }
 }

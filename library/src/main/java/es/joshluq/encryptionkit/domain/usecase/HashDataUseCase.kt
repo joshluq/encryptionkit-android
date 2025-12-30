@@ -1,17 +1,12 @@
 package es.joshluq.encryptionkit.domain.usecase
 
-import java.security.MessageDigest
-import javax.inject.Inject
+import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 
-/**
- * Use case for data hashing.
- * Supports SHA-256 (recommended) and MD5 (legacy/compatibility).
- */
-class HashDataUseCase @Inject constructor() {
-    
+class HashDataUseCase(
+    private val repository: EncryptionRepository
+) {
     operator fun invoke(data: ByteArray, algorithm: String = "SHA-256"): ByteArray {
-        val digest = MessageDigest.getInstance(algorithm)
-        return digest.digest(data)
+        return repository.hash(data, algorithm)
     }
 
     fun toHexString(data: ByteArray, algorithm: String = "SHA-256"): String {

@@ -1,16 +1,13 @@
 package es.joshluq.encryptionkit.domain.usecase
 
-import es.joshluq.encryptionkit.domain.CryptoEngine
-import es.joshluq.encryptionkit.domain.CryptoResult
-import javax.inject.Inject
+import es.joshluq.encryptionkit.domain.model.CryptoResult
+import es.joshluq.encryptionkit.domain.model.EncryptionConfig
+import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 
-/**
- * Use case for symmetric encryption using AES-GCM.
- */
-class EncryptSymmetricUseCase @Inject constructor(
-    private val cryptoEngine: CryptoEngine
+class EncryptSymmetricUseCase(
+    private val repository: EncryptionRepository
 ) {
-    operator fun invoke(data: ByteArray): CryptoResult {
-        return cryptoEngine.encrypt(data)
+    operator fun invoke(data: ByteArray, config: EncryptionConfig): CryptoResult {
+        return repository.encryptSymmetric(data, config)
     }
 }

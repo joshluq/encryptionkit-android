@@ -42,6 +42,10 @@ fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
     var textToEncrypt by remember { mutableStateOf("Military-grade data") }
     val scrollState = rememberScrollState()
 
+    // Determine if we can decrypt (based on if we have a success message that implies encryption happened)
+    // Ideally, ViewModel should expose this state, but for showcase this is fine.
+    val canDecrypt = uiState is ShowcaseUiState.Success && (uiState as ShowcaseUiState.Success).message.startsWith("Encrypted:")
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -61,34 +65,50 @@ fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "Symmetric (AES-GCM)", style = MaterialTheme.typography.titleMedium)
+        // Section: Symmetric Encryption
+        Text(text = "Symmetric (AES-GCM)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(text = "Local encryption/decryption using Android Keystore.", style = MaterialTheme.typography.bodySmall)
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(onClick = { viewModel.encrypt(textToEncrypt) }, modifier = Modifier.weight(1f)) {
+            Button(
+                onClick = { viewModel.encrypt(textToEncrypt) }, 
+                modifier = Modifier.weight(1f)
+            ) {
                 Text("Encrypt")
             }
-            Button(onClick = { viewModel.decrypt() }, modifier = Modifier.weight(1f)) {
+            Button(
+                onClick = { viewModel.decrypt() }, 
+                modifier = Modifier.weight(1f),
+                enabled = true // ViewModel handles the "nothing to decrypt" case gracefully
+            ) {
                 Text("Decrypt")
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "Asymmetric (RSA-OAEP)", style = MaterialTheme.typography.titleMedium)
+        // Section: Asymmetric Encryption
+        Text(text = "Asymmetric (RSA-OAEP)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(text = "Encrypt using a Certificate/Public Key (for server).", style = MaterialTheme.typography.bodySmall)
+        Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = { viewModel.encryptAsymmetric(textToEncrypt) },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("RSA Encrypt with Fake Public Key")
+            Text("RSA Encrypt (Public Key)")
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "Integrity & Hashing", style = MaterialTheme.typography.titleMedium)
+        // Section: Hashing
+        Text(text = "Integrity & Hashing", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(text = "One-way secure fingerprinting.", style = MaterialTheme.typography.bodySmall)
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -97,21 +117,25 @@ fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
                 Text("SHA-256")
             }
             Button(onClick = { viewModel.hashMD5(textToEncrypt) }, modifier = Modifier.weight(1f)) {
-                Text("MD5 (Legacy)")
+                Text("MD5")
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
+        // Section: Diagnostics
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+        
         Button(
             onClick = { viewModel.checkSecurity() },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
-            Text("Verify Hardware Security (TEE/StrongBox)")
+            Text("Check Hardware Security Level")
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),

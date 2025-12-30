@@ -1,4 +1,4 @@
-package es.joshluq.encryptionkit.domain
+package es.joshluq.encryptionkit.domain.model
 
 /**
  * Custom exception for cryptographic errors.
@@ -17,6 +17,7 @@ class CryptoException(
         USER_NOT_AUTHENTICATED,
         STRONG_BOX_UNAVAILABLE,
         INVALID_ALGORITHM,
+        CERTIFICATE_NOT_FOUND,
         UNKNOWN
     }
 }
