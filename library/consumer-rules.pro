@@ -1,2 +1,13 @@
-# ProGuard rules for library consumers
-# Add rules here to preserve/keep library APIs that consumers might reflect on
+# Keep the main SDK entry point and Builder
+-keep class es.joshluq.encryptionkit.sdk.Encryptionkit { *; }
+-keep class es.joshluq.encryptionkit.sdk.Encryptionkit$Builder { *; }
+
+# Keep Domain Models and Exceptions visible to the consumer
+-keep class es.joshluq.encryptionkit.domain.model.** { *; }
+-keep class es.joshluq.encryptionkit.domain.provider.** { *; }
+
+# Obfuscate internal Data Layer implementations
+-keepclassmembers class es.joshluq.encryptionkit.data.** {
+    *;
+}
+-repackageclasses 'es.joshluq.encryptionkit.internal'

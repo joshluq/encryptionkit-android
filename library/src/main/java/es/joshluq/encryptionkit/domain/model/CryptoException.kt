@@ -2,46 +2,39 @@ package es.joshluq.encryptionkit.domain.model
 
 /**
  * Custom exception thrown when a cryptographic operation fails.
- *
- * @property message Detailed error message.
- * @property cause The underlying cause of the exception (if any).
- * @property errorType The specific category of the error.
  */
 class CryptoException(
     message: String,
     cause: Throwable? = null,
-    val errorType: ErrorType
+    val reason: Reason = Reason.UNKNOWN
 ) : Exception(message, cause) {
 
     /**
-     * Categorizes the type of cryptographic failure.
+     * Categorizes the specific reason for the failure, allowing the UI/Consumer to react appropriately.
      */
-    enum class ErrorType {
-        /** Failed to generate the cryptographic key in the Keystore. */
-        KEY_GENERATION_FAILED,
-        
-        /** The encryption operation failed. */
-        ENCRYPTION_FAILED,
-        
-        /** The decryption operation failed (e.g. invalid key or corrupted data). */
-        DECRYPTION_FAILED,
-        
-        /** The requested key alias was not found in the Keystore. */
-        KEY_NOT_FOUND,
-        
-        /** The user failed to authenticate (Biometric/PIN) for a key requiring authentication. */
+    enum class Reason {
+        /** The key was permanently invalidated (e.g., new biometric enrollment). User must re-authenticate/reset keys. */
+        KEY_PERMANENTLY_INVALIDATED,
+
+        /** The user needs to authenticate (Biometric/PIN) to unlock the key. */
         USER_NOT_AUTHENTICATED,
-        
-        /** StrongBox was requested but is not available on this device. */
-        STRONG_BOX_UNAVAILABLE,
-        
-        /** The requested algorithm is not supported by the device. */
-        INVALID_ALGORITHM,
-        
-        /** The certificate file required for asymmetric operations could not be found. */
+
+        /** The key is considered weak or compromised. */
+        WEAK_KEY,
+
+        /** The public key fingerprint (hash) did not match the expected pinned value. Possible MITM. */
+        PUBLIC_KEY_PINNING_FAILURE,
+
+        /** General cryptographic failure (padding, block size, etc.). */
+        OPERATION_FAILED,
+
+        /** Key not found in Keystore. */
+        KEY_NOT_FOUND,
+
+        /** Certificate file missing. */
         CERTIFICATE_NOT_FOUND,
         
-        /** An unknown or unclassified error occurred. */
+        /** Unknown or unclassified error. */
         UNKNOWN
     }
 }

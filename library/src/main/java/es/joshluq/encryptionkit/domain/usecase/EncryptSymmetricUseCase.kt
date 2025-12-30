@@ -2,6 +2,7 @@ package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.EncryptionConfig
+import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 
 class EncryptSymmetricUseCase(
@@ -9,5 +10,13 @@ class EncryptSymmetricUseCase(
 ) {
     operator fun invoke(data: ByteArray, config: EncryptionConfig): CryptoResult {
         return repository.encryptSymmetric(data, config)
+    }
+
+    /**
+     * Overload to support SecureBytes. The byte array inside SecureBytes is used.
+     * Note: The repository copies data for encryption. The original SecureBytes remains responsible for its own clearing.
+     */
+    operator fun invoke(secureData: SecureBytes, config: EncryptionConfig): CryptoResult {
+        return repository.encryptSymmetric(secureData.data, config)
     }
 }

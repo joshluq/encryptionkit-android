@@ -37,10 +37,10 @@ class KeystoreDataSource {
                 try {
                     generateKeyInternal(config, false)
                 } catch (fallbackEx: Exception) {
-                    throw CryptoException("Key gen fallback failed", fallbackEx, CryptoException.ErrorType.KEY_GENERATION_FAILED)
+                    throw CryptoException("Key gen fallback failed", fallbackEx, CryptoException.Reason.KEY_NOT_FOUND)
                 }
             } else {
-                throw CryptoException("Key gen failed", e, CryptoException.ErrorType.KEY_GENERATION_FAILED)
+                throw CryptoException("Key gen failed", e, CryptoException.Reason.KEY_NOT_FOUND)
             }
         }
     }
@@ -79,6 +79,7 @@ class KeystoreDataSource {
         keyStore.deleteEntry(alias)
     }
 
+    @Suppress("DEPRECATION")
     fun getSecurityLevel(alias: String): SecurityLevel {
         val key = getKey(alias) as? SecretKey ?: return SecurityLevel.SOFTWARE
         return try {

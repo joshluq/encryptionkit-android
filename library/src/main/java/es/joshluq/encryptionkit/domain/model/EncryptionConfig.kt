@@ -1,14 +1,16 @@
 package es.joshluq.encryptionkit.domain.model
 
 /**
- * Internal configuration model for the encryption library.
+ * Configuration model for the encryption library.
  *
- * @property alias The alias (name) used to identify the key in the Android Keystore.
- * @property useStrongBox Whether the key should be stored in the Secure Element (StrongBox).
- * @property requireUserAuth Whether the key requires user authentication (biometrics) to be used.
+ * @property alias Key alias in Android Keystore.
+ * @property useStrongBox Prefer StrongBox (Secure Element).
+ * @property requireUserAuth Require Biometric/PIN authentication.
+ * @property publicKeyHash Optional SHA-256 hash (Hex) of the expected public key for pinning validation.
  */
 data class EncryptionConfig(
     val alias: String,
     val useStrongBox: Boolean,
-    val requireUserAuth: Boolean
+    val requireUserAuth: Boolean,
+    val publicKeyHash: String? = null
 )

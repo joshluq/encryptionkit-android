@@ -18,7 +18,7 @@ class FileDataSource(
             ?: throw CryptoException(
                 "Certificate path not provided by consumer",
                 null,
-                CryptoException.ErrorType.CERTIFICATE_NOT_FOUND
+                CryptoException.Reason.CERTIFICATE_NOT_FOUND
             )
 
         val file = File(path)
@@ -26,7 +26,7 @@ class FileDataSource(
             throw CryptoException(
                 "Certificate file not found at: $path",
                 null,
-                CryptoException.ErrorType.CERTIFICATE_NOT_FOUND
+                CryptoException.Reason.CERTIFICATE_NOT_FOUND
             )
         }
 
@@ -40,7 +40,7 @@ class FileDataSource(
             throw CryptoException(
                 "Failed to load certificate",
                 e,
-                CryptoException.ErrorType.INVALID_ALGORITHM
+                CryptoException.Reason.OPERATION_FAILED
             )
         }
     }

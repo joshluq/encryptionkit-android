@@ -3,8 +3,10 @@ package es.joshluq.encryptionkit.showcase.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
-import es.joshluq.encryptionkit.sdk.Encryptionkit
+import es.joshluq.encryptionkit.domain.model.SecureBytes
+import es.joshluq.encryptionkit.sdk.EncryptionkitManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,7 +15,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ShowcaseViewModel @Inject constructor(
-    private val encryptionKit: Encryptionkit
+    private val encryptionKitManager: EncryptionkitManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ShowcaseUiState>(ShowcaseUiState.Idle)
@@ -23,12 +25,17 @@ class ShowcaseViewModel @Inject constructor(
 
     fun encrypt(text: String) {
         viewModelScope.launch {
+            val secureData = SecureBytes(text.toByteArray())
             try {
-                val result = encryptionKit.encrypt(text.toByteArray())
+                val result = secureData.use { secure ->
+                    encryptionKitManager.encrypt(secure)
+                }
                 lastResult = result
-                _uiState.value = ShowcaseUiState.Success("Encrypted: ${result.ciphertext.joinToString("") { "%02x".format(it) }}")
+                _uiState.value = ShowcaseUiState.Success("Encrypted (via SecureBytes): ${result.ciphertext.joinToString("") { "%02x".format(it) }}")
+            } catch (e: CryptoException) {
+                _uiState.value = ShowcaseUiState.Error("Encryption failed: ${e.message} [Reason: ${e.reason}]")
             } catch (e: Exception) {
-                _uiState.value = ShowcaseUiState.Error(e.message ?: "Encryption failed")
+                _uiState.value = ShowcaseUiState.Error("Encryption failed: ${e.message}")
             }
         }
     }
@@ -42,8 +49,10 @@ class ShowcaseViewModel @Inject constructor(
             }
 
             try {
-                val decryptedBytes = encryptionKit.decrypt(result)
+                val decryptedBytes = encryptionKitManager.decrypt(result)
                 _uiState.value = ShowcaseUiState.Success("Decrypted: ${String(decryptedBytes)}")
+            } catch (e: CryptoException) {
+                _uiState.value = ShowcaseUiState.Error("Decryption failed: ${e.message} [Reason: ${e.reason}]")
             } catch (e: Exception) {
                 _uiState.value = ShowcaseUiState.Error(e.message ?: "Decryption failed")
             }
@@ -53,12 +62,12 @@ class ShowcaseViewModel @Inject constructor(
     fun encryptAsymmetric(text: String) {
         viewModelScope.launch {
             try {
-                // NOTE: This will fail if no certificate is provided via CertificatePathProvider
-                // and no valid public key is found. Ideally, handle this specific exception.
-                val encrypted = encryptionKit.encryptWithPublicKey(text.toByteArray())
+                val encrypted = encryptionKitManager.encryptWithPublicKey(text.toByteArray())
                 _uiState.value = ShowcaseUiState.Success("Asymmetric Encrypted: ${encrypted.joinToString("") { "%02x".format(it) }}")
+            } catch (e: CryptoException) {
+                _uiState.value = ShowcaseUiState.Error("Asymmetric Encryption failed: ${e.message} [Reason: ${e.reason}]")
             } catch (e: Exception) {
-                _uiState.value = ShowcaseUiState.Error("Asymmetric Encryption failed: ${e.message} (Is a certificate loaded?)")
+                _uiState.value = ShowcaseUiState.Error("Asymmetric Encryption failed: ${e.message}")
             }
         }
     }
@@ -66,7 +75,7 @@ class ShowcaseViewModel @Inject constructor(
     fun hashSHA256(text: String) {
         viewModelScope.launch {
             try {
-                val hash = encryptionKit.hashToHex(text, "SHA-256")
+                val hash = encryptionKitManager.hashToHex(text, "SHA-256")
                 _uiState.value = ShowcaseUiState.Success("SHA-256 Hash: $hash")
             } catch (e: Exception) {
                 _uiState.value = ShowcaseUiState.Error(e.message ?: "Hashing failed")
@@ -77,7 +86,7 @@ class ShowcaseViewModel @Inject constructor(
     fun hashMD5(text: String) {
         viewModelScope.launch {
             try {
-                val hash = encryptionKit.hashToHex(text, "MD5")
+                val hash = encryptionKitManager.hashToHex(text, "MD5")
                 _uiState.value = ShowcaseUiState.Success("MD5 Hash: $hash")
             } catch (e: Exception) {
                 _uiState.value = ShowcaseUiState.Error(e.message ?: "MD5 Hashing failed")
@@ -86,7 +95,7 @@ class ShowcaseViewModel @Inject constructor(
     }
 
     fun checkSecurity() {
-        val level = encryptionKit.getSecurityLevel()
+        val level = encryptionKitManager.getSecurityLevel()
         _uiState.value = ShowcaseUiState.Success("Security Level: $level")
     }
 }

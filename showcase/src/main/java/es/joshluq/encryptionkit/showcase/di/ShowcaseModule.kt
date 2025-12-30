@@ -7,7 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
-import es.joshluq.encryptionkit.sdk.Encryptionkit
+import es.joshluq.encryptionkit.sdk.EncryptionkitManager
 import java.io.File
 import javax.inject.Singleton
 
@@ -21,10 +21,8 @@ object ShowcaseModule {
         return object : CertificatePathProvider {
             override fun getCertificatePath(): String? {
                 // For showcase purposes, we can simulate a certificate file.
-                // In a real scenario, this file would exist in the app's private storage or assets.
                 val fakeCertFile = File(context.cacheDir, "fake_cert.crt")
                 if (!fakeCertFile.exists()) {
-                    // We could write a dummy cert here if needed, or return null to test fallback
                     return null
                 }
                 return fakeCertFile.absolutePath
@@ -34,13 +32,13 @@ object ShowcaseModule {
 
     @Provides
     @Singleton
-    fun provideEncryptionKit(
+    fun provideEncryptionKitManager(
         certificatePathProvider: CertificatePathProvider
-    ): Encryptionkit {
-        return Encryptionkit.Builder()
+    ): EncryptionkitManager {
+        return EncryptionkitManager.Builder()
             .setAlias("showcase_secure_key")
-            .useStrongBox(true) // Try to use Secure Element
-            .setRequireUserAuthentication(false) // Set to true to test Biometrics
+            .useStrongBox(true) 
+            .setRequireUserAuthentication(false)
             .setCertificatePathProvider(certificatePathProvider)
             .build()
     }
