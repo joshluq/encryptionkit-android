@@ -3,11 +3,27 @@ package es.joshluq.encryptionkit.sdk
 import es.joshluq.encryptionkit.data.datasource.FileDataSource
 import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.data.repository.EncryptionRepositoryImpl
-import es.joshluq.encryptionkit.domain.model.*
+import es.joshluq.encryptionkit.domain.model.CryptoException
+import es.joshluq.encryptionkit.domain.model.CryptoResult
+import es.joshluq.encryptionkit.domain.model.EncryptionConfig
+import es.joshluq.encryptionkit.domain.model.SecureBytes
+import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
-import es.joshluq.encryptionkit.domain.usecase.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import es.joshluq.encryptionkit.domain.usecase.DecryptSymmetricUseCase
+import es.joshluq.encryptionkit.domain.usecase.DeleteKeyUseCase
+import es.joshluq.encryptionkit.domain.usecase.EncryptAsymmetricUseCase
+import es.joshluq.encryptionkit.domain.usecase.EncryptSymmetricUseCase
+import es.joshluq.encryptionkit.domain.usecase.GetSecurityLevelUseCase
+import es.joshluq.encryptionkit.domain.usecase.HashDataUseCase
+import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.runBlocking
 
 /**
  * Main entry point for the EncryptionKit SDK.
@@ -170,7 +186,9 @@ class EncryptionkitManager internal constructor(
         fun setAlias(alias: String) = apply { this.alias = alias }
         fun useStrongBox(useStrongBox: Boolean) = apply { this.useStrongBox = useStrongBox }
         fun setRequireUserAuthentication(require: Boolean) = apply { this.requireUserAuth = require }
-        fun setCertificatePathProvider(provider: CertificatePathProvider) = apply { this.certificatePathProvider = provider }
+        fun setCertificatePathProvider(
+            provider: CertificatePathProvider
+        ) = apply { this.certificatePathProvider = provider }
         fun setPublicKeyPinning(sha256Hash: String) = apply { this.publicKeyHash = sha256Hash }
 
         fun build(): EncryptionkitManager {
@@ -181,11 +199,11 @@ class EncryptionkitManager internal constructor(
             }
             val fileDataSource = FileDataSource(certProvider)
             val repository = EncryptionRepositoryImpl(keystoreDataSource, fileDataSource)
-            
+
             val initializeLibraryUseCase = InitializeLibraryUseCase(repository)
-            
-            runBlocking { 
-                initializeLibraryUseCase(InitializeLibraryUseCase.Input(config)).collect() 
+
+            runBlocking {
+                initializeLibraryUseCase(InitializeLibraryUseCase.Input(config)).collect()
             }
 
             return EncryptionkitManager(

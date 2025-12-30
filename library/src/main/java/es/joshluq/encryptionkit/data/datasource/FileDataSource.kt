@@ -4,8 +4,10 @@ import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import java.io.File
 import java.io.FileInputStream
-import java.security.cert.CertificateFactory
+import java.io.IOException
 import java.security.PublicKey
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
 
 /**
  * DataSource responsible for reading certificates from the file system.
@@ -36,9 +38,15 @@ internal class FileDataSource(
                 val certificate = certFactory.generateCertificate(inputStream)
                 certificate.publicKey
             }
-        } catch (e: Exception) {
+        } catch (e: CertificateException) {
             throw CryptoException(
-                "Failed to load certificate",
+                "Failed to parse certificate",
+                e,
+                CryptoException.Reason.OPERATION_FAILED
+            )
+        } catch (e: IOException) {
+            throw CryptoException(
+                "Failed to read certificate file",
                 e,
                 CryptoException.Reason.OPERATION_FAILED
             )

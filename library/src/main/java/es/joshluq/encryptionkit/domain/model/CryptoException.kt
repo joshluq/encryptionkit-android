@@ -16,7 +16,8 @@ class CryptoException(
         /** Failed to generate the cryptographic key in the Keystore. */
         KEY_GENERATION_FAILED,
 
-        /** The key was permanently invalidated (e.g., new biometric enrollment). User must re-authenticate/reset keys. */
+        /** The key was permanently invalidated (e.g., new biometric enrollment).
+         * User must re-authenticate/reset keys. */
         KEY_PERMANENTLY_INVALIDATED,
 
         /** The user needs to authenticate (Biometric/PIN) to unlock the key. */
@@ -36,7 +37,7 @@ class CryptoException(
 
         /** Certificate file missing. */
         CERTIFICATE_NOT_FOUND,
-        
+
         /** Unknown or unclassified error. */
         UNKNOWN
     }

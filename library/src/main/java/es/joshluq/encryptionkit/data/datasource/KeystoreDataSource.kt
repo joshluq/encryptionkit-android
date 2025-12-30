@@ -7,8 +7,10 @@ import android.security.keystore.KeyProperties
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
+import java.security.GeneralSecurityException
 import java.security.Key
 import java.security.KeyStore
+import java.security.ProviderException
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
@@ -18,29 +20,53 @@ import javax.crypto.SecretKeyFactory
  */
 internal class KeystoreDataSource {
 
+    companion object {
+        private const val KEY_SIZE = 256
+    }
+
     private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply {
         load(null)
     }
 
     fun ensureKeyExists(config: EncryptionConfig) {
-        if (!keyStore.containsAlias(config.alias)) {
-            generateKey(config)
+        try {
+            if (!keyStore.containsAlias(config.alias)) {
+                generateKey(config)
+            }
+        } catch (e: GeneralSecurityException) {
+            throw CryptoException("Keystore access failed", e, CryptoException.Reason.KEY_GENERATION_FAILED)
         }
     }
 
     private fun generateKey(config: EncryptionConfig) {
         try {
             generateKeyInternal(config, config.useStrongBox)
-        } catch (e: Exception) {
-            if (config.useStrongBox) {
-                try {
-                    generateKeyInternal(config, false)
-                } catch (fallbackEx: Exception) {
-                    throw CryptoException("Key gen fallback failed", fallbackEx, CryptoException.Reason.KEY_GENERATION_FAILED)
-                }
-            } else {
-                throw CryptoException("Key gen failed", e, CryptoException.Reason.KEY_GENERATION_FAILED)
+        } catch (e: GeneralSecurityException) {
+            attemptFallback(config, e)
+        } catch (e: ProviderException) {
+            attemptFallback(config, e)
+        }
+    }
+
+    private fun attemptFallback(config: EncryptionConfig, originalError: Exception) {
+        if (config.useStrongBox) {
+            try {
+                generateKeyInternal(config, false)
+            } catch (fallbackEx: GeneralSecurityException) {
+                throw CryptoException(
+                    "Key gen fallback failed",
+                    fallbackEx,
+                    CryptoException.Reason.KEY_GENERATION_FAILED
+                )
+            } catch (fallbackEx: ProviderException) {
+                throw CryptoException(
+                    "Key gen fallback failed",
+                    fallbackEx,
+                    CryptoException.Reason.KEY_GENERATION_FAILED
+                )
             }
+        } else {
+            throw CryptoException("Key gen failed", originalError, CryptoException.Reason.KEY_GENERATION_FAILED)
         }
     }
 
@@ -52,7 +78,7 @@ internal class KeystoreDataSource {
         )
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .setKeySize(256)
+            .setKeySize(KEY_SIZE)
             .setRandomizedEncryptionRequired(true)
 
         if (config.requireUserAuth) {
@@ -71,11 +97,19 @@ internal class KeystoreDataSource {
     }
 
     fun getKey(alias: String): Key? {
-        return keyStore.getKey(alias, null)
+        return try {
+            keyStore.getKey(alias, null)
+        } catch (e: GeneralSecurityException) {
+            null
+        }
     }
 
     fun deleteKey(alias: String) {
-        keyStore.deleteEntry(alias)
+        try {
+            keyStore.deleteEntry(alias)
+        } catch (e: GeneralSecurityException) {
+            // Safe to ignore or log
+        }
     }
 
     fun getSecurityLevel(alias: String): SecurityLevel {
@@ -93,7 +127,7 @@ internal class KeystoreDataSource {
             } else {
                 if (keyInfo.isInsideSecureHardware) SecurityLevel.TRUSTED_ENVIRONMENT else SecurityLevel.SOFTWARE
             }
-        } catch (e: Exception) {
+        } catch (e: GeneralSecurityException) {
             SecurityLevel.SOFTWARE
         }
     }

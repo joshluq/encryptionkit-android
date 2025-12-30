@@ -9,7 +9,10 @@ import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import java.io.IOException
+import java.security.GeneralSecurityException
 import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
 import java.security.PublicKey
 import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
@@ -22,13 +25,19 @@ internal class EncryptionRepositoryImpl(
     private val fileDataSource: FileDataSource
 ) : EncryptionRepository {
 
+    companion object {
+        private const val LENGTH = 128
+    }
+
     private val aesTransformation = "AES/GCM/NoPadding"
     private val rsaTransformation = "RSA/ECB/OAEPPadding"
 
     override fun initializeKey(config: EncryptionConfig) {
         try {
             keystoreDataSource.ensureKeyExists(config)
-        } catch (e: Exception) {
+        } catch (e: GeneralSecurityException) {
+            throw mapException(e)
+        } catch (e: IOException) {
             throw mapException(e)
         }
     }
@@ -37,13 +46,13 @@ internal class EncryptionRepositoryImpl(
         try {
             val key = keystoreDataSource.getKey(config.alias)
                 ?: throw CryptoException("Key not found", reason = CryptoException.Reason.KEY_NOT_FOUND)
-            
+
             val cipher = Cipher.getInstance(aesTransformation)
             cipher.init(Cipher.ENCRYPT_MODE, key)
-            
+
             val ciphertext = cipher.doFinal(data)
             return CryptoResult(ciphertext, cipher.iv)
-        } catch (e: Exception) {
+        } catch (e: GeneralSecurityException) {
             throw mapException(e)
         }
     }
@@ -52,13 +61,13 @@ internal class EncryptionRepositoryImpl(
         try {
             val key = keystoreDataSource.getKey(config.alias)
                 ?: throw CryptoException("Key not found", reason = CryptoException.Reason.KEY_NOT_FOUND)
-            
+
             val cipher = Cipher.getInstance(aesTransformation)
-            val spec = GCMParameterSpec(128, iv)
+            val spec = GCMParameterSpec(LENGTH, iv)
             cipher.init(Cipher.DECRYPT_MODE, key, spec)
-            
+
             return cipher.doFinal(ciphertext)
-        } catch (e: Exception) {
+        } catch (e: GeneralSecurityException) {
             throw mapException(e)
         }
     }
@@ -72,19 +81,19 @@ internal class EncryptionRepositoryImpl(
     }
 
     override suspend fun getPublicKey(): PublicKey {
-        try {
-            return fileDataSource.getPublicKeyFromCertificate()
-        } catch (e: CryptoException) {
-            throw e
-        } catch (e: Exception) {
-            throw CryptoException("Failed to load public key", e, CryptoException.Reason.OPERATION_FAILED)
+        return try {
+            fileDataSource.getPublicKeyFromCertificate()
+        } catch (e: GeneralSecurityException) {
+            throw mapException(e)
+        } catch (e: IOException) {
+            throw mapException(e)
         }
     }
 
     override suspend fun encryptAsymmetric(data: ByteArray, config: EncryptionConfig): ByteArray {
         try {
             val publicKey = getPublicKey()
-            
+
             config.publicKeyHash?.let { expectedHash ->
                 val currentHash = hash(publicKey.encoded, "SHA-256").joinToString("") { "%02x".format(it) }
                 if (!currentHash.equals(expectedHash, ignoreCase = true)) {
@@ -97,11 +106,14 @@ internal class EncryptionRepositoryImpl(
 
             val cipher = Cipher.getInstance(rsaTransformation)
             val oaepParams = OAEPParameterSpec(
-                "SHA-256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT
+                "SHA-256",
+                "MGF1",
+                MGF1ParameterSpec.SHA256,
+                PSource.PSpecified.DEFAULT
             )
             cipher.init(Cipher.ENCRYPT_MODE, publicKey, oaepParams)
             return cipher.doFinal(data)
-        } catch (e: Exception) {
+        } catch (e: GeneralSecurityException) {
             throw mapException(e)
         }
     }
@@ -109,8 +121,12 @@ internal class EncryptionRepositoryImpl(
     override fun hash(data: ByteArray, algorithm: String): ByteArray {
         return try {
             MessageDigest.getInstance(algorithm).digest(data)
-        } catch (e: Exception) {
-            throw CryptoException("Hash failed", e, CryptoException.Reason.OPERATION_FAILED)
+        } catch (e: NoSuchAlgorithmException) {
+            throw CryptoException(
+                "Hash failed: algorithm $algorithm not found",
+                e,
+                CryptoException.Reason.OPERATION_FAILED
+            )
         }
     }
 
@@ -119,13 +135,19 @@ internal class EncryptionRepositoryImpl(
 
         return when (e) {
             is UserNotAuthenticatedException -> CryptoException(
-                "User authentication required", e, CryptoException.Reason.USER_NOT_AUTHENTICATED
+                "User authentication required",
+                e,
+                CryptoException.Reason.USER_NOT_AUTHENTICATED
             )
             is KeyPermanentlyInvalidatedException -> CryptoException(
-                "Key permanently invalidated (biometric changed?)", e, CryptoException.Reason.KEY_PERMANENTLY_INVALIDATED
+                "Key permanently invalidated (biometric changed?)",
+                e,
+                CryptoException.Reason.KEY_PERMANENTLY_INVALIDATED
             )
             else -> CryptoException(
-                e.message ?: "Unknown error", e, CryptoException.Reason.UNKNOWN
+                e.message ?: "Unknown error",
+                e,
+                CryptoException.Reason.UNKNOWN
             )
         }
     }
