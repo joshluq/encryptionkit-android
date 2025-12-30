@@ -3,13 +3,11 @@ package es.joshluq.encryptionkit.sdk
 import es.joshluq.encryptionkit.data.datasource.FileDataSource
 import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.data.repository.EncryptionRepositoryImpl
-import es.joshluq.encryptionkit.domain.model.CryptoException
-import es.joshluq.encryptionkit.domain.model.CryptoResult
-import es.joshluq.encryptionkit.domain.model.EncryptionConfig
-import es.joshluq.encryptionkit.domain.model.SecureBytes
-import es.joshluq.encryptionkit.domain.model.SecurityLevel
+import es.joshluq.encryptionkit.domain.model.*
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.encryptionkit.domain.usecase.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 
 /**
  * Main entry point for the EncryptionKit SDK.
@@ -28,108 +26,139 @@ class EncryptionkitManager internal constructor(
     private val config: EncryptionConfig
 ) {
 
+    private val sdkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /**
      * Encrypts the provided byte array using the configured symmetric key (AES-GCM).
-     *
-     * @param data The plaintext data to be encrypted.
-     * @return A [CryptoResult] containing the ciphertext and the Initialization Vector (IV).
-     * @throws CryptoException If the encryption process fails.
      */
-    fun encrypt(data: ByteArray): CryptoResult {
-        return encryptSymmetricUseCase(data, config)
+    fun encrypt(
+        data: ByteArray,
+        onSuccess: (CryptoResult) -> Unit,
+        onError: (CryptoException) -> Unit = {}
+    ) {
+        encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(data, config))
+            .onEach { onSuccess(it.result) }
+            .catch { e -> onError(mapToCryptoException(e)) }
+            .launchIn(sdkScope)
     }
 
     /**
      * Encrypts the provided secure data wrapper.
      */
-    fun encrypt(secureData: SecureBytes): CryptoResult {
-        return encryptSymmetricUseCase(secureData, config)
+    fun encrypt(
+        secureData: SecureBytes,
+        onSuccess: (CryptoResult) -> Unit,
+        onError: (CryptoException) -> Unit = {}
+    ) {
+        encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(secureData.data, config))
+            .onEach { onSuccess(it.result) }
+            .catch { e -> onError(mapToCryptoException(e)) }
+            .launchIn(sdkScope)
     }
 
     /**
      * Decrypts the provided ciphertext using the configured symmetric key (AES-GCM).
-     *
-     * @param ciphertext The encrypted data.
-     * @param iv The Initialization Vector used during encryption.
-     * @return The original plaintext data.
-     * @throws CryptoException If decryption fails (e.g., integrity check failure or invalid key).
      */
-    fun decrypt(ciphertext: ByteArray, iv: ByteArray): ByteArray {
-        return decryptSymmetricUseCase(ciphertext, iv, config)
+    fun decrypt(
+        ciphertext: ByteArray,
+        iv: ByteArray,
+        onSuccess: (ByteArray) -> Unit,
+        onError: (CryptoException) -> Unit = {}
+    ) {
+        decryptSymmetricUseCase(DecryptSymmetricUseCase.Input(ciphertext, iv, config))
+            .onEach { onSuccess(it.data) }
+            .catch { e -> onError(mapToCryptoException(e)) }
+            .launchIn(sdkScope)
     }
-    
+
     /**
      * Convenience method to decrypt data from a [CryptoResult].
-     *
-     * @param result The result object containing both ciphertext and IV.
-     * @return The original plaintext data.
-     * @throws CryptoException If decryption fails.
      */
-    fun decrypt(result: CryptoResult): ByteArray {
-        return decryptSymmetricUseCase(result.ciphertext, result.iv, config)
+    fun decrypt(
+        result: CryptoResult,
+        onSuccess: (ByteArray) -> Unit,
+        onError: (CryptoException) -> Unit = {}
+    ) {
+        decrypt(result.ciphertext, result.iv, onSuccess, onError)
     }
 
     /**
      * Encrypts the provided data using RSA-OAEP with a public key.
-     * The public key is retrieved from the certificate provided via [CertificatePathProvider].
-     *
-     * @param data The plaintext data to be encrypted.
-     * @return The encrypted data.
-     * @throws CryptoException If the public key cannot be loaded or encryption fails.
      */
-    suspend fun encryptWithPublicKey(data: ByteArray): ByteArray {
-        return encryptAsymmetricUseCase(data, config)
-    }
-
-    /**
-     * Encrypts the provided secure data using RSA-OAEP with a public key.
-     */
-    suspend fun encryptWithPublicKey(secureData: SecureBytes): ByteArray {
-        return encryptAsymmetricUseCase(secureData, config)
+    fun encryptWithPublicKey(
+        data: ByteArray,
+        onSuccess: (ByteArray) -> Unit,
+        onError: (CryptoException) -> Unit = {}
+    ) {
+        encryptAsymmetricUseCase(EncryptAsymmetricUseCase.Input(data = data, config = config))
+            .onEach { onSuccess(it.data) }
+            .catch { e -> onError(mapToCryptoException(e)) }
+            .launchIn(sdkScope)
     }
 
     /**
      * Retrieves the current hardware security level of the symmetric key.
-     *
-     * @return [SecurityLevel.STRONGBOX], [SecurityLevel.TRUSTED_ENVIRONMENT], or [SecurityLevel.SOFTWARE].
      */
-    fun getSecurityLevel(): SecurityLevel {
-        return getSecurityLevelUseCase(config.alias)
+    fun getSecurityLevel(
+        onSuccess: (SecurityLevel) -> Unit,
+        onError: (CryptoException) -> Unit = {}
+    ) {
+        getSecurityLevelUseCase(GetSecurityLevelUseCase.Input(config.alias))
+            .onEach { onSuccess(it.level) }
+            .catch { e -> onError(mapToCryptoException(e)) }
+            .launchIn(sdkScope)
     }
 
     /**
-     * Deletes the symmetric key associated with this instance from the Android Keystore.
-     * WARNING: Data encrypted with this key will become permanently unrecoverable.
+     * Deletes the symmetric key associated with this instance.
      */
-    fun deleteKey() {
-        deleteKeyUseCase(config.alias)
+    fun deleteKey(onComplete: () -> Unit = {}, onError: (CryptoException) -> Unit = {}) {
+        deleteKeyUseCase(DeleteKeyUseCase.Input(config.alias))
+            .onEach { onComplete() }
+            .catch { e -> onError(mapToCryptoException(e)) }
+            .launchIn(sdkScope)
     }
 
     /**
      * Generates a cryptographic hash of the provided data.
-     *
-     * @param data The input data to hash.
-     * @param algorithm The hashing algorithm to use (default: "SHA-256"). Supports "MD5".
-     * @return The hash digest as a byte array.
      */
-    fun hash(data: ByteArray, algorithm: String = "SHA-256"): ByteArray {
-        return hashDataUseCase(data, algorithm)
+    fun hash(
+        data: ByteArray,
+        algorithm: String = "SHA-256",
+        onSuccess: (ByteArray) -> Unit,
+        onError: (CryptoException) -> Unit = {}
+    ) {
+        hashDataUseCase(HashDataUseCase.Input(data, algorithm))
+            .onEach { onSuccess(it.data) }
+            .catch { e -> onError(mapToCryptoException(e)) }
+            .launchIn(sdkScope)
     }
-    
+
     /**
      * Generates a cryptographic hash of the provided text and returns it as a Hex string.
-     *
-     * @param text The input string to hash.
-     * @param algorithm The hashing algorithm to use (default: "SHA-256").
-     * @return The hash digest as a hexadecimal string.
      */
-    fun hashToHex(text: String, algorithm: String = "SHA-256"): String {
-        return hashDataUseCase.toHexString(text.toByteArray(), algorithm)
+    fun hashToHex(
+        text: String,
+        algorithm: String = "SHA-256",
+        onSuccess: (String) -> Unit,
+        onError: (CryptoException) -> Unit = {}
+    ) {
+        hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm))
+            .onEach { output ->
+                val hexString = output.data.joinToString("") { "%02x".format(it) }
+                onSuccess(hexString)
+            }
+            .catch { e -> onError(mapToCryptoException(e)) }
+            .launchIn(sdkScope)
+    }
+
+    private fun mapToCryptoException(e: Throwable): CryptoException {
+        return e as? CryptoException
+            ?: CryptoException(e.message ?: "Unknown error", e, CryptoException.Reason.UNKNOWN)
     }
 
     /**
      * Builder class for creating [EncryptionkitManager] instances.
-     * No Context is required for initialization.
      */
     class Builder {
         private var alias: String = "encryption_kit_default_key"
@@ -141,14 +170,8 @@ class EncryptionkitManager internal constructor(
         fun setAlias(alias: String) = apply { this.alias = alias }
         fun useStrongBox(useStrongBox: Boolean) = apply { this.useStrongBox = useStrongBox }
         fun setRequireUserAuthentication(require: Boolean) = apply { this.requireUserAuth = require }
-        
-        fun setCertificatePathProvider(provider: CertificatePathProvider) = apply { 
-            this.certificatePathProvider = provider 
-        }
-
-        fun setPublicKeyPinning(sha256Hash: String) = apply {
-            this.publicKeyHash = sha256Hash
-        }
+        fun setCertificatePathProvider(provider: CertificatePathProvider) = apply { this.certificatePathProvider = provider }
+        fun setPublicKeyPinning(sha256Hash: String) = apply { this.publicKeyHash = sha256Hash }
 
         fun build(): EncryptionkitManager {
             val config = EncryptionConfig(alias, useStrongBox, requireUserAuth, publicKeyHash)
@@ -160,7 +183,10 @@ class EncryptionkitManager internal constructor(
             val repository = EncryptionRepositoryImpl(keystoreDataSource, fileDataSource)
             
             val initializeLibraryUseCase = InitializeLibraryUseCase(repository)
-            initializeLibraryUseCase(config)
+            
+            runBlocking { 
+                initializeLibraryUseCase(InitializeLibraryUseCase.Input(config)).collect() 
+            }
 
             return EncryptionkitManager(
                 encryptSymmetricUseCase = EncryptSymmetricUseCase(repository),

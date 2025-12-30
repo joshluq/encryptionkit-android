@@ -2,11 +2,12 @@ package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.EncryptionConfig
-import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -24,43 +25,30 @@ class SymmetricUseCaseTest {
     private val cryptoResult = CryptoResult(ciphertext, iv)
 
     @Test
-    fun `EncryptSymmetricUseCase should delegate to repository`() {
+    fun `EncryptSymmetricUseCase should delegate to repository`() = runBlocking {
         // Given
         every { repository.encryptSymmetric(data, config) } returns cryptoResult
+        val input = EncryptSymmetricUseCase.Input(data, config)
 
         // When
-        val result = encryptUseCase(data, config)
+        val result = encryptUseCase(input).first()
 
         // Then
-        assertEquals(cryptoResult, result)
+        assertEquals(cryptoResult, result.result)
         verify { repository.encryptSymmetric(data, config) }
     }
 
     @Test
-    fun `EncryptSymmetricUseCase should support SecureBytes`() {
-        // Given
-        val secureBytes = SecureBytes(data.copyOf())
-        every { repository.encryptSymmetric(any(), config) } returns cryptoResult
-
-        // When
-        val result = encryptUseCase(secureBytes, config)
-
-        // Then
-        assertEquals(cryptoResult, result)
-        // verify called with the underlying array
-        verify { repository.encryptSymmetric(match { it.contentEquals(data) }, config) }
-    }
-
-    @Test
-    fun `DecryptSymmetricUseCase should delegate to repository`() {
+    fun `DecryptSymmetricUseCase should delegate to repository`() = runBlocking {
         // Given
         every { repository.decryptSymmetric(ciphertext, iv, config) } returns data
+        val input = DecryptSymmetricUseCase.Input(ciphertext, iv, config)
 
         // When
-        val result = decryptUseCase(ciphertext, iv, config)
+        val result = decryptUseCase(input).first()
 
         // Then
-        assertArrayEquals(data, result)
+        assertArrayEquals(data, result.data)
         verify { repository.decryptSymmetric(ciphertext, iv, config) }
     }
 }

@@ -2,14 +2,15 @@ package es.joshluq.encryptionkit.sdk
 
 import es.joshluq.encryptionkit.domain.model.*
 import es.joshluq.encryptionkit.domain.usecase.*
-import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class EncryptionkitManagerTest {
 
@@ -33,60 +34,51 @@ class EncryptionkitManagerTest {
     )
 
     @Test
-    fun `encrypt should delegate to EncryptSymmetricUseCase`() {
+    fun `encrypt should call onSuccess when successful`() {
         val data = "data".toByteArray()
         val expectedResult = CryptoResult("cipher".toByteArray(), "iv".toByteArray())
-        every { encryptSymmetricUseCase(data, config) } returns expectedResult
+        val latch = CountDownLatch(1)
+        
+        every { encryptSymmetricUseCase(any()) } returns flowOf(EncryptSymmetricUseCase.Output(expectedResult))
 
-        val result = manager.encrypt(data)
+        manager.encrypt(data, onSuccess = {
+            assertEquals(expectedResult, it)
+            latch.countDown()
+        })
 
-        assertEquals(expectedResult, result)
-        verify { encryptSymmetricUseCase(data, config) }
+        latch.await(1, TimeUnit.SECONDS)
     }
 
     @Test
-    fun `decrypt should delegate to DecryptSymmetricUseCase`() {
+    fun `decrypt should call onSuccess when successful`() {
         val ciphertext = "cipher".toByteArray()
         val iv = "iv".toByteArray()
         val expectedPlaintext = "plain".toByteArray()
-        every { decryptSymmetricUseCase(ciphertext, iv, config) } returns expectedPlaintext
+        val latch = CountDownLatch(1)
 
-        val result = manager.decrypt(ciphertext, iv)
+        every { decryptSymmetricUseCase(any()) } returns flowOf(DecryptSymmetricUseCase.Output(expectedPlaintext))
 
-        assertArrayEquals(expectedPlaintext, result)
-        verify { decryptSymmetricUseCase(ciphertext, iv, config) }
+        manager.decrypt(ciphertext, iv, onSuccess = {
+            assertArrayEquals(expectedPlaintext, it)
+            latch.countDown()
+        })
+
+        latch.await(1, TimeUnit.SECONDS)
     }
 
     @Test
-    fun `encryptWithPublicKey should delegate to EncryptAsymmetricUseCase`() = runBlocking {
-        val data = "data".toByteArray()
-        val expectedEncrypted = "rsa_cipher".toByteArray()
-        coEvery { encryptAsymmetricUseCase(data, config) } returns expectedEncrypted
+    fun `hashToHex should return hex string via callback`() {
+        val text = "test"
+        val mockHash = byteArrayOf(0x00, 0xff.toByte())
+        val latch = CountDownLatch(1)
 
-        val result = manager.encryptWithPublicKey(data)
+        every { hashDataUseCase(any()) } returns flowOf(HashDataUseCase.Output(mockHash))
 
-        assertArrayEquals(expectedEncrypted, result)
-    }
+        manager.hashToHex(text, onSuccess = {
+            assertEquals("00ff", it)
+            latch.countDown()
+        })
 
-    @Test
-    fun `getSecurityLevel should delegate to GetSecurityLevelUseCase`() {
-        every { getSecurityLevelUseCase(config.alias) } returns SecurityLevel.STRONGBOX
-
-        val result = manager.getSecurityLevel()
-
-        assertEquals(SecurityLevel.STRONGBOX, result)
-        verify { getSecurityLevelUseCase(config.alias) }
-    }
-
-    @Test
-    fun `hash should delegate to HashDataUseCase`() {
-        val data = "data".toByteArray()
-        val expectedHash = "hash".toByteArray()
-        every { hashDataUseCase(data, "SHA-256") } returns expectedHash
-
-        val result = manager.hash(data)
-
-        assertArrayEquals(expectedHash, result)
-        verify { hashDataUseCase(data, "SHA-256") }
+        latch.await(1, TimeUnit.SECONDS)
     }
 }

@@ -8,6 +8,7 @@ import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -50,7 +51,7 @@ class EncryptionRepositoryImplTest {
     }
 
     @Test
-    suspend fun `getPublicKey should delegate to fileDataSource`() {
+    fun `getPublicKey should delegate to fileDataSource`() = runTest {
         val mockPublicKey: PublicKey = mockk()
         every { fileDataSource.getPublicKeyFromCertificate() } returns mockPublicKey
 

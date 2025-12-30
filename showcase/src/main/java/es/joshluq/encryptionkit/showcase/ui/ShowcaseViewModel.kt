@@ -3,7 +3,6 @@ package es.joshluq.encryptionkit.showcase.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.sdk.EncryptionkitManager
@@ -24,79 +23,82 @@ class ShowcaseViewModel @Inject constructor(
     private var lastResult: CryptoResult? = null
 
     fun encrypt(text: String) {
-        viewModelScope.launch {
-            val secureData = SecureBytes(text.toByteArray())
-            try {
-                val result = secureData.use { secure ->
-                    encryptionKitManager.encrypt(secure)
-                }
+        // Create SecureBytes. Since the Manager call is now asynchronous (launchIn),
+        // we manually close it in the callbacks instead of using the 'use' block.
+        val secureData = SecureBytes(text.toByteArray())
+        
+        encryptionKitManager.encrypt(
+            secureData = secureData,
+            onSuccess = { result ->
                 lastResult = result
                 _uiState.value = ShowcaseUiState.Success("Encrypted (via SecureBytes): ${result.ciphertext.joinToString("") { "%02x".format(it) }}")
-            } catch (e: CryptoException) {
+                secureData.close() // Wipe sensitive memory
+            },
+            onError = { e ->
                 _uiState.value = ShowcaseUiState.Error("Encryption failed: ${e.message} [Reason: ${e.reason}]")
-            } catch (e: Exception) {
-                _uiState.value = ShowcaseUiState.Error("Encryption failed: ${e.message}")
+                secureData.close() // Wipe sensitive memory
             }
-        }
+        )
     }
 
     fun decrypt() {
-        viewModelScope.launch {
-            val result = lastResult
-            if (result == null) {
-                _uiState.value = ShowcaseUiState.Error("Nothing to decrypt")
-                return@launch
-            }
-
-            try {
-                val decryptedBytes = encryptionKitManager.decrypt(result)
-                _uiState.value = ShowcaseUiState.Success("Decrypted: ${String(decryptedBytes)}")
-            } catch (e: CryptoException) {
-                _uiState.value = ShowcaseUiState.Error("Decryption failed: ${e.message} [Reason: ${e.reason}]")
-            } catch (e: Exception) {
-                _uiState.value = ShowcaseUiState.Error(e.message ?: "Decryption failed")
-            }
+        val result = lastResult
+        if (result == null) {
+            _uiState.value = ShowcaseUiState.Error("Nothing to decrypt")
+            return
         }
+
+        encryptionKitManager.decrypt(
+            result = result,
+            onSuccess = { decryptedBytes ->
+                _uiState.value = ShowcaseUiState.Success("Decrypted: ${String(decryptedBytes)}")
+            },
+            onError = { e ->
+                _uiState.value = ShowcaseUiState.Error("Decryption failed: ${e.message} [Reason: ${e.reason}]")
+            }
+        )
     }
 
     fun encryptAsymmetric(text: String) {
-        viewModelScope.launch {
-            try {
-                val encrypted = encryptionKitManager.encryptWithPublicKey(text.toByteArray())
+        encryptionKitManager.encryptWithPublicKey(
+            data = text.toByteArray(),
+            onSuccess = { encrypted ->
                 _uiState.value = ShowcaseUiState.Success("Asymmetric Encrypted: ${encrypted.joinToString("") { "%02x".format(it) }}")
-            } catch (e: CryptoException) {
+            },
+            onError = { e ->
                 _uiState.value = ShowcaseUiState.Error("Asymmetric Encryption failed: ${e.message} [Reason: ${e.reason}]")
-            } catch (e: Exception) {
-                _uiState.value = ShowcaseUiState.Error("Asymmetric Encryption failed: ${e.message}")
             }
-        }
+        )
     }
 
     fun hashSHA256(text: String) {
-        viewModelScope.launch {
-            try {
-                val hash = encryptionKitManager.hashToHex(text, "SHA-256")
-                _uiState.value = ShowcaseUiState.Success("SHA-256 Hash: $hash")
-            } catch (e: Exception) {
-                _uiState.value = ShowcaseUiState.Error(e.message ?: "Hashing failed")
-            }
+        // hashToHex is a synchronous convenience method in this version
+        try {
+            val hash = encryptionKitManager.hashToHex(text, "SHA-256")
+            _uiState.value = ShowcaseUiState.Success("SHA-256 Hash: $hash")
+        } catch (e: Exception) {
+            _uiState.value = ShowcaseUiState.Error("Hashing failed: ${e.message}")
         }
     }
 
     fun hashMD5(text: String) {
-        viewModelScope.launch {
-            try {
-                val hash = encryptionKitManager.hashToHex(text, "MD5")
-                _uiState.value = ShowcaseUiState.Success("MD5 Hash: $hash")
-            } catch (e: Exception) {
-                _uiState.value = ShowcaseUiState.Error(e.message ?: "MD5 Hashing failed")
-            }
+        try {
+            val hash = encryptionKitManager.hashToHex(text, "MD5")
+            _uiState.value = ShowcaseUiState.Success("MD5 Hash: $hash")
+        } catch (e: Exception) {
+            _uiState.value = ShowcaseUiState.Error("MD5 Hashing failed: ${e.message}")
         }
     }
 
     fun checkSecurity() {
-        val level = encryptionKitManager.getSecurityLevel()
-        _uiState.value = ShowcaseUiState.Success("Security Level: $level")
+        encryptionKitManager.getSecurityLevel(
+            onSuccess = { level ->
+                _uiState.value = ShowcaseUiState.Success("Security Level: $level")
+            },
+            onError = { e ->
+                _uiState.value = ShowcaseUiState.Error("Failed to get security level: ${e.message}")
+            }
+        )
     }
 }
 
@@ -105,3 +107,4 @@ sealed class ShowcaseUiState {
     data class Success(val message: String) : ShowcaseUiState()
     data class Error(val message: String) : ShowcaseUiState()
 }
+
