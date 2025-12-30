@@ -1,7 +1,11 @@
 package es.joshluq.encryptionkit.domain.model
 
 /**
- * Encapsulates the result of an encryption operation.
+ * Encapsulates the result of a symmetric encryption operation.
+ *
+ * @property ciphertext The encrypted data as a byte array.
+ * @property iv The Initialization Vector (IV) used during the encryption process.
+ *              This value is required to decrypt the ciphertext and should be stored alongside it.
  */
 data class CryptoResult(
     val ciphertext: ByteArray,
