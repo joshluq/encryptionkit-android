@@ -7,7 +7,6 @@ import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.EncryptionConfig
-import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import java.security.MessageDigest
@@ -18,7 +17,7 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.OAEPParameterSpec
 import javax.crypto.spec.PSource
 
-class EncryptionRepositoryImpl(
+internal class EncryptionRepositoryImpl(
     private val keystoreDataSource: KeystoreDataSource,
     private val fileDataSource: FileDataSource
 ) : EncryptionRepository {
@@ -40,7 +39,6 @@ class EncryptionRepositoryImpl(
                 ?: throw CryptoException("Key not found", reason = CryptoException.Reason.KEY_NOT_FOUND)
             
             val cipher = Cipher.getInstance(aesTransformation)
-            // SECURITY: Never pass an IV for encryption. Let the provider generate a random secure IV.
             cipher.init(Cipher.ENCRYPT_MODE, key)
             
             val ciphertext = cipher.doFinal(data)
@@ -87,7 +85,6 @@ class EncryptionRepositoryImpl(
         try {
             val publicKey = getPublicKey()
             
-            // SECURITY: Public Key Pinning (Fingerprint Validation)
             config.publicKeyHash?.let { expectedHash ->
                 val currentHash = hash(publicKey.encoded, "SHA-256").joinToString("") { "%02x".format(it) }
                 if (!currentHash.equals(expectedHash, ignoreCase = true)) {

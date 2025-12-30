@@ -2,7 +2,7 @@ package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 
-class HashDataUseCase(
+internal class HashDataUseCase(
     private val repository: EncryptionRepository
 ) {
     operator fun invoke(data: ByteArray, algorithm: String = "SHA-256"): ByteArray {

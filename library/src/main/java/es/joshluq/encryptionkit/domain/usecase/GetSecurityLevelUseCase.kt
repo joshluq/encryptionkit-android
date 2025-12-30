@@ -3,7 +3,7 @@ package es.joshluq.encryptionkit.domain.usecase
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 
-class GetSecurityLevelUseCase(
+internal class GetSecurityLevelUseCase(
     private val repository: EncryptionRepository
 ) {
     operator fun invoke(alias: String): SecurityLevel {

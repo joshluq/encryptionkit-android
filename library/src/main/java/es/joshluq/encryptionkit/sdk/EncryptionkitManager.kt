@@ -18,7 +18,7 @@ import es.joshluq.encryptionkit.domain.usecase.*
  *
  * Instances of this class are obtained via the [EncryptionkitManager.Builder].
  */
-class EncryptionkitManager private constructor(
+class EncryptionkitManager internal constructor(
     private val encryptSymmetricUseCase: EncryptSymmetricUseCase,
     private val decryptSymmetricUseCase: DecryptSymmetricUseCase,
     private val encryptAsymmetricUseCase: EncryptAsymmetricUseCase,
@@ -81,6 +81,9 @@ class EncryptionkitManager private constructor(
         return encryptAsymmetricUseCase(data, config)
     }
 
+    /**
+     * Encrypts the provided secure data using RSA-OAEP with a public key.
+     */
     suspend fun encryptWithPublicKey(secureData: SecureBytes): ByteArray {
         return encryptAsymmetricUseCase(secureData, config)
     }
@@ -135,65 +138,27 @@ class EncryptionkitManager private constructor(
         private var certificatePathProvider: CertificatePathProvider? = null
         private var publicKeyHash: String? = null
 
-        /**
-         * Sets the alias (name) for the key in the Android Keystore.
-         * Using different aliases allows multiple distinct keys to coexist.
-         *
-         * @param alias The unique identifier for the key.
-         */
         fun setAlias(alias: String) = apply { this.alias = alias }
-
-        /**
-         * Requests the use of a Secure Element (StrongBox) for key storage.
-         * StrongBox offers the highest level of security but may have performance trade-offs.
-         *
-         * @param useStrongBox True to prefer StrongBox, false otherwise.
-         */
         fun useStrongBox(useStrongBox: Boolean) = apply { this.useStrongBox = useStrongBox }
-
-        /**
-         * Enforces user authentication (Biometrics/PIN) for key usage.
-         *
-         * @param require True to require authentication for every cryptographic operation.
-         */
         fun setRequireUserAuthentication(require: Boolean) = apply { this.requireUserAuth = require }
         
-        /**
-         * Sets a provider for loading X.509 certificates from the file system.
-         * Required for [encryptWithPublicKey] operations.
-         *
-         * @param provider An implementation of [CertificatePathProvider].
-         */
         fun setCertificatePathProvider(provider: CertificatePathProvider) = apply { 
             this.certificatePathProvider = provider 
         }
 
-        /**
-         * Sets the expected SHA-256 hash (Hex) of the public key for pinning validation.
-         * If the loaded key does not match this hash, asymmetric encryption will fail.
-         */
         fun setPublicKeyPinning(sha256Hash: String) = apply {
             this.publicKeyHash = sha256Hash
         }
 
-        /**
-         * Builds and initializes the [EncryptionkitManager] instance.
-         * This ensures the cryptographic keys are generated and ready for use.
-         */
         fun build(): EncryptionkitManager {
             val config = EncryptionConfig(alias, useStrongBox, requireUserAuth, publicKeyHash)
-            
-            // Manual Dependency Injection Wiring (Composition Root)
             val keystoreDataSource = KeystoreDataSource()
-            
             val certProvider = certificatePathProvider ?: object : CertificatePathProvider {
                 override fun getCertificatePath(): String? = null
             }
             val fileDataSource = FileDataSource(certProvider)
-            
             val repository = EncryptionRepositoryImpl(keystoreDataSource, fileDataSource)
             
-            // Initialize Key
             val initializeLibraryUseCase = InitializeLibraryUseCase(repository)
             initializeLibraryUseCase(config)
 

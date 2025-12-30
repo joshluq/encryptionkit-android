@@ -4,7 +4,7 @@ import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 
-class EncryptAsymmetricUseCase(
+internal class EncryptAsymmetricUseCase(
     private val repository: EncryptionRepository
 ) {
     suspend operator fun invoke(data: ByteArray, config: EncryptionConfig): ByteArray {

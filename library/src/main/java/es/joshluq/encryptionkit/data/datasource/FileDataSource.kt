@@ -10,7 +10,7 @@ import java.security.PublicKey
 /**
  * DataSource responsible for reading certificates from the file system.
  */
-class FileDataSource(
+internal class FileDataSource(
     private val certificatePathProvider: CertificatePathProvider
 ) {
     fun getPublicKeyFromCertificate(): PublicKey {

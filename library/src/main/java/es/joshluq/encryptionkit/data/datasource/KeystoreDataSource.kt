@@ -16,7 +16,7 @@ import javax.crypto.SecretKeyFactory
 /**
  * DataSource responsible for low-level interactions with the Android Keystore.
  */
-class KeystoreDataSource {
+internal class KeystoreDataSource {
 
     private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply {
         load(null)
@@ -33,14 +33,13 @@ class KeystoreDataSource {
             generateKeyInternal(config, config.useStrongBox)
         } catch (e: Exception) {
             if (config.useStrongBox) {
-                // Fallback attempt
                 try {
                     generateKeyInternal(config, false)
                 } catch (fallbackEx: Exception) {
-                    throw CryptoException("Key gen fallback failed", fallbackEx, CryptoException.Reason.KEY_NOT_FOUND)
+                    throw CryptoException("Key gen fallback failed", fallbackEx, CryptoException.Reason.KEY_GENERATION_FAILED)
                 }
             } else {
-                throw CryptoException("Key gen failed", e, CryptoException.Reason.KEY_NOT_FOUND)
+                throw CryptoException("Key gen failed", e, CryptoException.Reason.KEY_GENERATION_FAILED)
             }
         }
     }
@@ -79,7 +78,6 @@ class KeystoreDataSource {
         keyStore.deleteEntry(alias)
     }
 
-    @Suppress("DEPRECATION")
     fun getSecurityLevel(alias: String): SecurityLevel {
         val key = getKey(alias) as? SecretKey ?: return SecurityLevel.SOFTWARE
         return try {

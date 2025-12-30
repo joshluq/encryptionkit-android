@@ -5,7 +5,7 @@ import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import java.security.PublicKey
 
-interface EncryptionRepository {
+internal interface EncryptionRepository {
     fun initializeKey(config: EncryptionConfig)
     fun encryptSymmetric(data: ByteArray, config: EncryptionConfig): CryptoResult
     fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, config: EncryptionConfig): ByteArray
