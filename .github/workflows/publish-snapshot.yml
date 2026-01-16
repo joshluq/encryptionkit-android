@@ -1,4 +1,4 @@
-name: Publish Monitorkit Snapshot
+name: Publish Encriptionkit Snapshot
 
 on:
   push:
@@ -38,10 +38,8 @@ jobs:
 
       - name: Ejecutar Fastlane Publish Snapshot
         env:
-          
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
-          
         run: |
           chmod +x gradlew
           bundle exec fastlane publish_snapshot

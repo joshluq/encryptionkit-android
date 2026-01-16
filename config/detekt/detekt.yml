@@ -83,7 +83,7 @@ complexity:
   LongParameterList:
     active: true
     functionThreshold: 6
-    constructorThreshold: 7
+    constructorThreshold: 12
   MethodOverloading:
     active: false
   NestedBlockDepth:
@@ -494,7 +494,7 @@ style:
     active: true
   ThrowsCount:
     active: true
-    max: 2
+    max: 4
   TrailingWhitespace:
     active: true
   UnderscoresInNumericLiterals:

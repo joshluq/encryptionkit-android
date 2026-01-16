@@ -3,14 +3,14 @@ default_platform(:android)
 platform :android do
   desc "Publish a snapshot version of the Encryptionkit library to GitHub Packages"
   lane :publish_snapshot do
-    gradle(
-      task: "publish",
-      project_dir: ".",
-      properties: {
-        "versionType" => "-SNAPSHOT"
-      }
-    )
-  end
+      gradle(
+        task: "publish",
+        project_dir: ".",
+        properties: {
+          "versionType" => "-SNAPSHOT"
+        }
+      )
+    end
 
 lane :publish_release do
     desc "Publish a release version of the Encryptionkit library to GitHub Packages"
