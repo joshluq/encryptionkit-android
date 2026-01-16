@@ -18,6 +18,8 @@ The library implements a **Defense-in-Depth** strategy, ensuring that sensitive 
 - **Android Keystore Management**: 
     - **Hardware Security Level**: Prefers `StrongBox` when available, falling back to `TEE`.
     - **User Authentication Binding**: Integration with `BiometricPrompt` for "Auth-per-use" or "Time-bound" key access.
+    - **Security Verification**: Capability to query the runtime security level (`StrongBox`, `TEE`, or `Software`) of the generated key.
+    - **Lifecycle Management**: Support for secure key deletion.
     - **Granular Error Handling**: Detailed failure reasons (`KEY_PERMANENTLY_INVALIDATED`, `USER_NOT_AUTHENTICATED`) to guide the UI flow.
 - **Symmetric Encryption (AES)**:
     - **AES/GCM/NoPadding (256-bit)**: The primary standard for data at rest. Enforces unique, non-deterministic IV generation via `SecureRandom` (never accepts external IVs for encryption).

@@ -10,6 +10,7 @@ Encryptionkit is a high-performance, security-focused library for Android design
 - **Authenticated Encryption**: Uses **AES-GCM (256-bit)** by default to ensure both data confidentiality and integrity (AEAD).
 - **Zero-Trust Memory**: Optimized handling of sensitive data using **`SecureBytes`** to explicitly wipe data from memory after use.
 - **Asymmetric Encryption**: Support for **RSA-OAEP (SHA-256)** with optional **Public Key Pinning** to prevent Man-in-the-Middle attacks.
+- **Integrity & Hashing**: Secure one-way hashing (**SHA-256**, **MD5**) for data integrity verification and fingerprinting.
 - **Asynchronous API**: Non-blocking operations using Coroutines and Callbacks for a smooth UI experience.
 - **Clean Architecture**: Decoupled design with a simplified Builder pattern, removing the need for dependency injection frameworks in the consumer app.
 
@@ -114,6 +115,36 @@ builder.encryptWithPublicKey(
     data = payload,
     onSuccess = { encrypted -> /* Send to server */ },
     onError = { e -> /* Handle MITM or loading error */ }
+)
+```
+
+### 5. Hashing
+Generate a secure fingerprint of data (SHA-256 by default).
+
+```kotlin
+encryptionManager.hashToHex(
+    text = "Important Data",
+    onSuccess = { hash ->
+        // e.g., "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+    },
+    onError = { e -> /* Handle error */ }
+)
+```
+
+### 6. Security Management
+Verify the hardware security level or delete the key.
+
+```kotlin
+// Check Security Level
+encryptionManager.getSecurityLevel(
+    onSuccess = { level ->
+        // level can be STRONG_BOX, TRUSTED_ENVIRONMENT, or SOFTWARE
+    }
+)
+
+// Delete Key
+encryptionManager.deleteKey(
+    onComplete = { /* Key deleted */ }
 )
 ```
 
