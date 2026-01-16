@@ -125,6 +125,7 @@ internal class KeystoreDataSource {
                     else -> SecurityLevel.SOFTWARE
                 }
             } else {
+                @Suppress("DEPRECATION")
                 if (keyInfo.isInsideSecureHardware) SecurityLevel.TRUSTED_ENVIRONMENT else SecurityLevel.SOFTWARE
             }
         } catch (e: GeneralSecurityException) {

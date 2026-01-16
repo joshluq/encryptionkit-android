@@ -6,9 +6,9 @@ import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.coVerify
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AsymmetricUseCaseTest {
@@ -27,10 +27,11 @@ class AsymmetricUseCaseTest {
         val input = EncryptAsymmetricUseCase.Input(data = data, config = config)
 
         // When
-        val result = useCase(input).first()
+        val result = useCase(input)
 
         // Then
-        assertArrayEquals(encrypted, result.data)
+        assertTrue(result.isSuccess)
+        assertArrayEquals(encrypted, result.getOrNull()?.data)
         coVerify { repository.encryptAsymmetric(data, config) }
     }
 
@@ -42,10 +43,11 @@ class AsymmetricUseCaseTest {
         val input = EncryptAsymmetricUseCase.Input(secureData = secure, config = config)
 
         // When
-        val result = useCase(input).first()
+        val result = useCase(input)
 
         // Then
-        assertArrayEquals(encrypted, result.data)
+        assertTrue(result.isSuccess)
+        assertArrayEquals(encrypted, result.getOrNull()?.data)
         coVerify { repository.encryptAsymmetric(match { it.contentEquals(data) }, config) }
     }
 }

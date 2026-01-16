@@ -6,10 +6,10 @@ import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SymmetricUseCaseTest {
@@ -31,10 +31,11 @@ class SymmetricUseCaseTest {
         val input = EncryptSymmetricUseCase.Input(data, config)
 
         // When
-        val result = encryptUseCase(input).first()
+        val result = encryptUseCase(input)
 
         // Then
-        assertEquals(cryptoResult, result.result)
+        assertTrue(result.isSuccess)
+        assertEquals(cryptoResult, result.getOrNull()?.result)
         verify { repository.encryptSymmetric(data, config) }
     }
 
@@ -45,10 +46,11 @@ class SymmetricUseCaseTest {
         val input = DecryptSymmetricUseCase.Input(ciphertext, iv, config)
 
         // When
-        val result = decryptUseCase(input).first()
+        val result = decryptUseCase(input)
 
         // Then
-        assertArrayEquals(data, result.data)
+        assertTrue(result.isSuccess)
+        assertArrayEquals(data, result.getOrNull()?.data)
         verify { repository.decryptSymmetric(ciphertext, iv, config) }
     }
 }

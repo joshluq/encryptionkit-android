@@ -4,9 +4,9 @@ import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HashDataUseCaseTest {
@@ -23,10 +23,11 @@ class HashDataUseCaseTest {
         every { repository.hash(data, "SHA-256") } returns expectedHash
 
         // When
-        val result = useCase(input).first()
+        val result = useCase(input)
 
         // Then
-        assertEquals(expectedHash, result.data)
+        assertTrue(result.isSuccess)
+        assertEquals(expectedHash, result.getOrNull()?.data)
         verify { repository.hash(data, "SHA-256") }
     }
 }

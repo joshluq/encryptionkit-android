@@ -8,9 +8,9 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ManagementUseCaseTest {
@@ -24,8 +24,9 @@ class ManagementUseCaseTest {
         val input = InitializeLibraryUseCase.Input(config)
         every { repository.initializeKey(config) } just runs
 
-        useCase(input).first()
+        val result = useCase(input)
 
+        assertTrue(result.isSuccess)
         verify { repository.initializeKey(config) }
     }
 
@@ -36,8 +37,9 @@ class ManagementUseCaseTest {
         val input = DeleteKeyUseCase.Input(alias)
         every { repository.deleteKey(alias) } just runs
 
-        useCase(input).first()
+        val result = useCase(input)
 
+        assertTrue(result.isSuccess)
         verify { repository.deleteKey(alias) }
     }
 
@@ -48,9 +50,10 @@ class ManagementUseCaseTest {
         val input = GetSecurityLevelUseCase.Input(alias)
         every { repository.getSecurityLevel(alias) } returns SecurityLevel.STRONGBOX
 
-        val result = useCase(input).first()
+        val result = useCase(input)
 
-        assertEquals(SecurityLevel.STRONGBOX, result.level)
+        assertTrue(result.isSuccess)
+        assertEquals(SecurityLevel.STRONGBOX, result.getOrNull()?.level)
         verify { repository.getSecurityLevel(alias) }
     }
 }

@@ -3,20 +3,18 @@ package es.joshluq.encryptionkit.domain.usecase
 import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 
 internal class EncryptAsymmetricUseCase(
     private val repository: EncryptionRepository
 ) : UseCase<EncryptAsymmetricUseCase.Input, EncryptAsymmetricUseCase.Output> {
 
-    override fun invoke(input: Input): Flow<Output> = flow {
+    override suspend fun invoke(input: Input): Result<Output> = runCatching {
         val result = if (input.secureData != null) {
             repository.encryptAsymmetric(input.secureData.data, input.config)
         } else {
             repository.encryptAsymmetric(input.data ?: byteArrayOf(), input.config)
         }
-        emit(Output(result))
+        Output(result)
     }
 
     data class Input(

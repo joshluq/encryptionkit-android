@@ -25,7 +25,7 @@ interface UseCase<in I : UseCaseInput, out O : UseCaseOutput> {
      * @param input The parameters required for the operation.
      * @return A [Flow] emitting the result of the operation.
      */
-    operator fun invoke(input: I): Flow<O>
+    suspend operator fun invoke(input: I): Result<O>
 }
 
 /**

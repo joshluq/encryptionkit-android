@@ -19,10 +19,7 @@ import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -52,10 +49,11 @@ class EncryptionkitManager internal constructor(
         onSuccess: (CryptoResult) -> Unit,
         onError: (CryptoException) -> Unit = {}
     ) {
-        encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(data, config))
-            .onEach { onSuccess(it.result) }
-            .catch { e -> onError(mapToCryptoException(e)) }
-            .launchIn(sdkScope)
+        sdkScope.launch {
+            encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(data, config))
+                .onSuccess { onSuccess(it.result) }
+                .onFailure { e -> onError(mapToCryptoException(e)) }
+        }
     }
 
     /**
@@ -66,10 +64,11 @@ class EncryptionkitManager internal constructor(
         onSuccess: (CryptoResult) -> Unit,
         onError: (CryptoException) -> Unit = {}
     ) {
-        encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(secureData.data, config))
-            .onEach { onSuccess(it.result) }
-            .catch { e -> onError(mapToCryptoException(e)) }
-            .launchIn(sdkScope)
+        sdkScope.launch {
+            encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(secureData.data, config))
+                .onSuccess { onSuccess(it.result) }
+                .onFailure { e -> onError(mapToCryptoException(e)) }
+        }
     }
 
     /**
@@ -81,10 +80,11 @@ class EncryptionkitManager internal constructor(
         onSuccess: (ByteArray) -> Unit,
         onError: (CryptoException) -> Unit = {}
     ) {
-        decryptSymmetricUseCase(DecryptSymmetricUseCase.Input(ciphertext, iv, config))
-            .onEach { onSuccess(it.data) }
-            .catch { e -> onError(mapToCryptoException(e)) }
-            .launchIn(sdkScope)
+        sdkScope.launch {
+            decryptSymmetricUseCase(DecryptSymmetricUseCase.Input(ciphertext, iv, config))
+                .onSuccess { onSuccess(it.data) }
+                .onFailure { e -> onError(mapToCryptoException(e)) }
+        }
     }
 
     /**
@@ -106,10 +106,11 @@ class EncryptionkitManager internal constructor(
         onSuccess: (ByteArray) -> Unit,
         onError: (CryptoException) -> Unit = {}
     ) {
-        encryptAsymmetricUseCase(EncryptAsymmetricUseCase.Input(data = data, config = config))
-            .onEach { onSuccess(it.data) }
-            .catch { e -> onError(mapToCryptoException(e)) }
-            .launchIn(sdkScope)
+        sdkScope.launch {
+            encryptAsymmetricUseCase(EncryptAsymmetricUseCase.Input(data = data, config = config))
+                .onSuccess { onSuccess(it.data) }
+                .onFailure { e -> onError(mapToCryptoException(e)) }
+        }
     }
 
     /**
@@ -119,20 +120,22 @@ class EncryptionkitManager internal constructor(
         onSuccess: (SecurityLevel) -> Unit,
         onError: (CryptoException) -> Unit = {}
     ) {
-        getSecurityLevelUseCase(GetSecurityLevelUseCase.Input(config.alias))
-            .onEach { onSuccess(it.level) }
-            .catch { e -> onError(mapToCryptoException(e)) }
-            .launchIn(sdkScope)
+        sdkScope.launch {
+            getSecurityLevelUseCase(GetSecurityLevelUseCase.Input(config.alias))
+                .onSuccess { onSuccess(it.level) }
+                .onFailure { e -> onError(mapToCryptoException(e)) }
+        }
     }
 
     /**
      * Deletes the symmetric key associated with this instance.
      */
     fun deleteKey(onComplete: () -> Unit = {}, onError: (CryptoException) -> Unit = {}) {
-        deleteKeyUseCase(DeleteKeyUseCase.Input(config.alias))
-            .onEach { onComplete() }
-            .catch { e -> onError(mapToCryptoException(e)) }
-            .launchIn(sdkScope)
+        sdkScope.launch {
+            deleteKeyUseCase(DeleteKeyUseCase.Input(config.alias))
+                .onSuccess { onComplete() }
+                .onFailure { e -> onError(mapToCryptoException(e)) }
+        }
     }
 
     /**
@@ -144,10 +147,11 @@ class EncryptionkitManager internal constructor(
         onSuccess: (ByteArray) -> Unit,
         onError: (CryptoException) -> Unit = {}
     ) {
-        hashDataUseCase(HashDataUseCase.Input(data, algorithm))
-            .onEach { onSuccess(it.data) }
-            .catch { e -> onError(mapToCryptoException(e)) }
-            .launchIn(sdkScope)
+        sdkScope.launch {
+            hashDataUseCase(HashDataUseCase.Input(data, algorithm))
+                .onSuccess { onSuccess(it.data) }
+                .onFailure { e -> onError(mapToCryptoException(e)) }
+        }
     }
 
     /**
@@ -159,13 +163,14 @@ class EncryptionkitManager internal constructor(
         onSuccess: (String) -> Unit,
         onError: (CryptoException) -> Unit = {}
     ) {
-        hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm))
-            .onEach { output ->
-                val hexString = output.data.joinToString("") { "%02x".format(it) }
-                onSuccess(hexString)
-            }
-            .catch { e -> onError(mapToCryptoException(e)) }
-            .launchIn(sdkScope)
+        sdkScope.launch {
+            hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm))
+                .onSuccess { output ->
+                    val hexString = output.data.joinToString("") { "%02x".format(it) }
+                    onSuccess(hexString)
+                }
+                .onFailure { e -> onError(mapToCryptoException(e)) }
+        }
     }
 
     private fun mapToCryptoException(e: Throwable): CryptoException {
@@ -203,7 +208,7 @@ class EncryptionkitManager internal constructor(
             val initializeLibraryUseCase = InitializeLibraryUseCase(repository)
 
             runBlocking {
-                initializeLibraryUseCase(InitializeLibraryUseCase.Input(config)).collect()
+                initializeLibraryUseCase(InitializeLibraryUseCase.Input(config))
             }
 
             return EncryptionkitManager(
