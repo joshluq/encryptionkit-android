@@ -1,3 +1,6 @@
+import com.android.build.api.dsl.LibraryExtension
+import org.gradle.kotlin.dsl.configure
+
 plugins {
     alias(libs.plugins.pluginkit.android.library)
     alias(libs.plugins.pluginkit.quality)
@@ -8,7 +11,7 @@ plugins {
 group = providers.gradleProperty("groupId").get()
 version = providers.gradleProperty("libraryVersion").get()
 
-android {
+configure<LibraryExtension> {
     namespace = "es.joshluq.encryptionkit"
 }
 
