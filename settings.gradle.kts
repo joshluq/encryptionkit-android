@@ -22,6 +22,7 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     val repositoryUrl = providers.gradleProperty("repositoryUrl").get()
     val catalogVersion = providers.gradleProperty("catalogVersion").get()
@@ -37,6 +38,7 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         maven { setupGithub("pluginkit-android") }
+        maven { setupGithub("foundationkit-android") }
         google()
         mavenCentral()
     }

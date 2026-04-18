@@ -16,10 +16,6 @@ import es.joshluq.encryptionkit.domain.usecase.EncryptSymmetricUseCase
 import es.joshluq.encryptionkit.domain.usecase.GetSecurityLevelUseCase
 import es.joshluq.encryptionkit.domain.usecase.HashDataUseCase
 import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -39,139 +35,81 @@ class EncryptionkitManager internal constructor(
     private val config: EncryptionConfig
 ) {
 
-    private val sdkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
     /**
      * Encrypts the provided byte array using the configured symmetric key (AES-GCM).
      */
-    fun encrypt(
-        data: ByteArray,
-        onSuccess: (CryptoResult) -> Unit,
-        onError: (CryptoException) -> Unit = {}
-    ) {
-        sdkScope.launch {
-            encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(data, config))
-                .onSuccess { onSuccess(it.result) }
-                .onFailure { e -> onError(mapToCryptoException(e)) }
-        }
-    }
+    suspend fun encrypt(data: ByteArray): Result<CryptoResult> =
+        encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(data, config))
+            .map { it.result }
+            .mapFailure()
 
     /**
      * Encrypts the provided secure data wrapper.
      */
-    fun encrypt(
-        secureData: SecureBytes,
-        onSuccess: (CryptoResult) -> Unit,
-        onError: (CryptoException) -> Unit = {}
-    ) {
-        sdkScope.launch {
-            encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(secureData.data, config))
-                .onSuccess { onSuccess(it.result) }
-                .onFailure { e -> onError(mapToCryptoException(e)) }
-        }
-    }
+    suspend fun encrypt(secureData: SecureBytes): Result<CryptoResult> =
+        encryptSymmetricUseCase(EncryptSymmetricUseCase.Input(secureData.data, config))
+            .map { it.result }
+            .mapFailure()
 
     /**
      * Decrypts the provided ciphertext using the configured symmetric key (AES-GCM).
      */
-    fun decrypt(
-        ciphertext: ByteArray,
-        iv: ByteArray,
-        onSuccess: (ByteArray) -> Unit,
-        onError: (CryptoException) -> Unit = {}
-    ) {
-        sdkScope.launch {
-            decryptSymmetricUseCase(DecryptSymmetricUseCase.Input(ciphertext, iv, config))
-                .onSuccess { onSuccess(it.data) }
-                .onFailure { e -> onError(mapToCryptoException(e)) }
-        }
-    }
+    suspend fun decrypt(ciphertext: ByteArray, iv: ByteArray): Result<ByteArray> =
+        decryptSymmetricUseCase(DecryptSymmetricUseCase.Input(ciphertext, iv, config))
+            .map { it.data }
+            .mapFailure()
 
     /**
      * Convenience method to decrypt data from a [CryptoResult].
      */
-    fun decrypt(
-        result: CryptoResult,
-        onSuccess: (ByteArray) -> Unit,
-        onError: (CryptoException) -> Unit = {}
-    ) {
-        decrypt(result.ciphertext, result.iv, onSuccess, onError)
-    }
+    suspend fun decrypt(result: CryptoResult): Result<ByteArray> =
+        decrypt(result.ciphertext, result.iv)
 
     /**
      * Encrypts the provided data using RSA-OAEP with a public key.
      */
-    fun encryptWithPublicKey(
-        data: ByteArray,
-        onSuccess: (ByteArray) -> Unit,
-        onError: (CryptoException) -> Unit = {}
-    ) {
-        sdkScope.launch {
-            encryptAsymmetricUseCase(EncryptAsymmetricUseCase.Input(data = data, config = config))
-                .onSuccess { onSuccess(it.data) }
-                .onFailure { e -> onError(mapToCryptoException(e)) }
-        }
-    }
+    suspend fun encryptWithPublicKey(data: ByteArray): Result<ByteArray> =
+        encryptAsymmetricUseCase(EncryptAsymmetricUseCase.Input(data = data, config = config))
+            .map { it.data }
+            .mapFailure()
 
     /**
      * Retrieves the current hardware security level of the symmetric key.
      */
-    fun getSecurityLevel(
-        onSuccess: (SecurityLevel) -> Unit,
-        onError: (CryptoException) -> Unit = {}
-    ) {
-        sdkScope.launch {
-            getSecurityLevelUseCase(GetSecurityLevelUseCase.Input(config.alias))
-                .onSuccess { onSuccess(it.level) }
-                .onFailure { e -> onError(mapToCryptoException(e)) }
-        }
-    }
+    suspend fun getSecurityLevel(): Result<SecurityLevel> =
+        getSecurityLevelUseCase(GetSecurityLevelUseCase.Input(config.alias))
+            .map { it.level }
+            .mapFailure()
 
     /**
      * Deletes the symmetric key associated with this instance.
      */
-    fun deleteKey(onComplete: () -> Unit = {}, onError: (CryptoException) -> Unit = {}) {
-        sdkScope.launch {
-            deleteKeyUseCase(DeleteKeyUseCase.Input(config.alias))
-                .onSuccess { onComplete() }
-                .onFailure { e -> onError(mapToCryptoException(e)) }
-        }
-    }
+    suspend fun deleteKey(): Result<Unit> =
+        deleteKeyUseCase(DeleteKeyUseCase.Input(config.alias))
+            .map { }
+            .mapFailure()
 
     /**
      * Generates a cryptographic hash of the provided data.
      */
-    fun hash(
-        data: ByteArray,
-        algorithm: String = "SHA-256",
-        onSuccess: (ByteArray) -> Unit,
-        onError: (CryptoException) -> Unit = {}
-    ) {
-        sdkScope.launch {
-            hashDataUseCase(HashDataUseCase.Input(data, algorithm))
-                .onSuccess { onSuccess(it.data) }
-                .onFailure { e -> onError(mapToCryptoException(e)) }
-        }
-    }
+    suspend fun hash(data: ByteArray, algorithm: String = "SHA-256"): Result<ByteArray> =
+        hashDataUseCase(HashDataUseCase.Input(data, algorithm))
+            .map { it.data }
+            .mapFailure()
 
     /**
      * Generates a cryptographic hash of the provided text and returns it as a Hex string.
      */
-    fun hashToHex(
-        text: String,
-        algorithm: String = "SHA-256",
-        onSuccess: (String) -> Unit,
-        onError: (CryptoException) -> Unit = {}
-    ) {
-        sdkScope.launch {
-            hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm))
-                .onSuccess { output ->
-                    val hexString = output.data.joinToString("") { "%02x".format(it) }
-                    onSuccess(hexString)
-                }
-                .onFailure { e -> onError(mapToCryptoException(e)) }
-        }
-    }
+    suspend fun hashToHex(text: String, algorithm: String = "SHA-256"): Result<String> =
+        hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm))
+            .map { output -> output.data.joinToString("") { "%02x".format(it) } }
+            .mapFailure()
+
+    private fun <T> Result<T>.mapFailure(): Result<T> =
+        fold(
+            onSuccess = { Result.success(it) },
+            onFailure = { Result.failure(mapToCryptoException(it)) }
+        )
 
     private fun mapToCryptoException(e: Throwable): CryptoException {
         return e as? CryptoException

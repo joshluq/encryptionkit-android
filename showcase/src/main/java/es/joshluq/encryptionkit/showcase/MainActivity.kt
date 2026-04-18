@@ -40,11 +40,18 @@ class MainActivity : ComponentActivity() {
 fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     var textToEncrypt by remember { mutableStateOf("Military-grade data") }
+    var ciphertextInput by remember { mutableStateOf("") }
+    var ivInput by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
 
-    // Determine if we can decrypt (based on if we have a success message that implies encryption happened)
-    // Ideally, ViewModel should expose this state, but for showcase this is fine.
-    val canDecrypt = uiState is ShowcaseUiState.Success && (uiState as ShowcaseUiState.Success).message.startsWith("Encrypted:")
+    // Update inputs when encryption succeeds
+    LaunchedEffect(uiState) {
+        if (uiState is ShowcaseUiState.Success) {
+            val success = uiState as ShowcaseUiState.Success
+            success.ciphertext?.let { ciphertextInput = it }
+            success.iv?.let { ivInput = it }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -71,6 +78,24 @@ fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
         Text(text = "Symmetric (AES-GCM)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         Text(text = "Local encryption/decryption using Android Keystore.", style = MaterialTheme.typography.bodySmall)
         Spacer(modifier = Modifier.height(8.dp))
+        
+        OutlinedTextField(
+            value = ciphertextInput,
+            onValueChange = { ciphertextInput = it },
+            label = { Text("Ciphertext (Hex)") },
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodySmall
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = ivInput,
+            onValueChange = { ivInput = it },
+            label = { Text("IV (Hex)") },
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodySmall
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -82,9 +107,9 @@ fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
                 Text("Encrypt")
             }
             Button(
-                onClick = { viewModel.decrypt() }, 
+                onClick = { viewModel.decrypt(ciphertextInput, ivInput) }, 
                 modifier = Modifier.weight(1f),
-                enabled = true // ViewModel handles the "nothing to decrypt" case gracefully
+                enabled = ciphertextInput.isNotEmpty() && ivInput.isNotEmpty()
             ) {
                 Text("Decrypt")
             }

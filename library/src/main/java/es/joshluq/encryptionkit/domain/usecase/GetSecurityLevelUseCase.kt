@@ -2,6 +2,9 @@ package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import es.joshluq.foundationkit.usecase.UseCase
+import es.joshluq.foundationkit.usecase.UseCaseInput
+import es.joshluq.foundationkit.usecase.UseCaseOutput
 
 internal class GetSecurityLevelUseCase(
     private val repository: EncryptionRepository
