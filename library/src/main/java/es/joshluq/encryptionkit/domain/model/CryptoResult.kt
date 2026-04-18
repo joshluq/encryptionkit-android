@@ -11,6 +11,11 @@ data class CryptoResult(
     val ciphertext: ByteArray,
     val iv: ByteArray
 ) {
+    /**
+     * Converts the ciphertext to a Hexadecimal string.
+     */
+    fun toHexString(): String = ciphertext.joinToString("") { "%02x".format(it) }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

@@ -3,6 +3,9 @@ package es.joshluq.encryptionkit.domain.usecase
 import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import es.joshluq.foundationkit.usecase.UseCase
+import es.joshluq.foundationkit.usecase.UseCaseInput
+import es.joshluq.foundationkit.usecase.UseCaseOutput
 
 internal class EncryptAsymmetricUseCase(
     private val repository: EncryptionRepository
@@ -21,7 +24,44 @@ internal class EncryptAsymmetricUseCase(
         val data: ByteArray? = null,
         val secureData: SecureBytes? = null,
         val config: EncryptionConfig
-    ) : UseCaseInput
+    ) : UseCaseInput {
 
-    data class Output(val data: ByteArray) : UseCaseOutput
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Input
+
+            if (!data.contentEquals(other.data)) return false
+            if (secureData != other.secureData) return false
+            if (config != other.config) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = data?.contentHashCode() ?: 0
+            result = 31 * result + (secureData?.hashCode() ?: 0)
+            result = 31 * result + config.hashCode()
+            return result
+        }
+    }
+
+    data class Output(val data: ByteArray) : UseCaseOutput {
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Output
+
+            if (!data.contentEquals(other.data)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return data.contentHashCode()
+        }
+    }
 }

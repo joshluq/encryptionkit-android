@@ -2,15 +2,13 @@ package es.joshluq.encryptionkit.sdk
 
 import es.joshluq.encryptionkit.domain.model.*
 import es.joshluq.encryptionkit.domain.usecase.*
-import io.mockk.every
+import io.mockk.coEvery
 import io.mockk.mockk
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 class EncryptionkitManagerTest {
 
@@ -34,51 +32,56 @@ class EncryptionkitManagerTest {
     )
 
     @Test
-    fun `encrypt should call onSuccess when successful`() {
+    fun `encrypt should return success result when successful`() = runBlocking {
         val data = "data".toByteArray()
         val expectedResult = CryptoResult("cipher".toByteArray(), "iv".toByteArray())
-        val latch = CountDownLatch(1)
         
-        every { encryptSymmetricUseCase(any()) } returns flowOf(EncryptSymmetricUseCase.Output(expectedResult))
+        coEvery { encryptSymmetricUseCase(any()) } returns Result.success(EncryptSymmetricUseCase.Output(expectedResult))
 
-        manager.encrypt(data, onSuccess = {
-            assertEquals(expectedResult, it)
-            latch.countDown()
-        })
+        val result = manager.encrypt(data)
 
-        latch.await(1, TimeUnit.SECONDS)
+        assertTrue(result.isSuccess)
+        assertEquals(expectedResult, result.getOrNull())
     }
 
     @Test
-    fun `decrypt should call onSuccess when successful`() {
+    fun `decrypt should return success result when successful`() = runBlocking {
         val ciphertext = "cipher".toByteArray()
         val iv = "iv".toByteArray()
         val expectedPlaintext = "plain".toByteArray()
-        val latch = CountDownLatch(1)
 
-        every { decryptSymmetricUseCase(any()) } returns flowOf(DecryptSymmetricUseCase.Output(expectedPlaintext))
+        coEvery { decryptSymmetricUseCase(any()) } returns Result.success(DecryptSymmetricUseCase.Output(expectedPlaintext))
 
-        manager.decrypt(ciphertext, iv, onSuccess = {
-            assertArrayEquals(expectedPlaintext, it)
-            latch.countDown()
-        })
+        val result = manager.decrypt(ciphertext, iv)
 
-        latch.await(1, TimeUnit.SECONDS)
+        assertTrue(result.isSuccess)
+        assertArrayEquals(expectedPlaintext, result.getOrNull())
     }
 
     @Test
-    fun `hashToHex should return hex string via callback`() {
+    fun `hashToHex should return hex string result`() = runBlocking {
         val text = "test"
         val mockHash = byteArrayOf(0x00, 0xff.toByte())
-        val latch = CountDownLatch(1)
 
-        every { hashDataUseCase(any()) } returns flowOf(HashDataUseCase.Output(mockHash))
+        coEvery { hashDataUseCase(any()) } returns Result.success(HashDataUseCase.Output(mockHash))
 
-        manager.hashToHex(text, onSuccess = {
-            assertEquals("00ff", it)
-            latch.countDown()
-        })
+        val result = manager.hashToHex(text)
 
-        latch.await(1, TimeUnit.SECONDS)
+        assertTrue(result.isSuccess)
+        assertEquals("00ff", result.getOrNull())
+    }
+
+    @Test
+    fun `any function should return failure when use case fails`() = runBlocking {
+        val data = "data".toByteArray()
+        val exception = Exception("Encryption failed")
+        
+        coEvery { encryptSymmetricUseCase(any()) } returns Result.failure(exception)
+
+        val result = manager.encrypt(data)
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is CryptoException)
+        assertEquals("Encryption failed", result.exceptionOrNull()?.message)
     }
 }

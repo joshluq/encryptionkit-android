@@ -1,6 +1,9 @@
 package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import es.joshluq.foundationkit.usecase.NoneOutput
+import es.joshluq.foundationkit.usecase.UseCase
+import es.joshluq.foundationkit.usecase.UseCaseInput
 
 internal class DeleteKeyUseCase(
     private val repository: EncryptionRepository
