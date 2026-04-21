@@ -1,6 +1,6 @@
 package es.joshluq.encryptionkit.data.datasource
 
-import es.joshluq.encryptionkit.domain.model.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import io.mockk.every
 import io.mockk.mockk

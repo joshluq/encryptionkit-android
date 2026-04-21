@@ -6,9 +6,9 @@ import es.joshluq.encryptionkit.data.datasource.FileDataSource
 import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
-import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import es.joshluq.encryptionkit.sdk.EncryptionConfig
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.MessageDigest
@@ -34,7 +34,11 @@ internal class EncryptionRepositoryImpl(
 
     override fun initializeKey(config: EncryptionConfig) {
         try {
-            keystoreDataSource.ensureKeyExists(config)
+            keystoreDataSource.ensureKeyExists(
+                config.alias,
+                config.requireUserAuth,
+                config.useStrongBox
+            )
         } catch (e: GeneralSecurityException) {
             throw mapException(e)
         } catch (e: IOException) {

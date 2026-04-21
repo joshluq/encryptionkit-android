@@ -74,7 +74,7 @@ class ShowcaseViewModel @Inject constructor(
 
     fun hashSHA256(text: String) {
         viewModelScope.launch {
-            encryptionKitManager.hashToHex(text = text, algorithm = "SHA-256")
+            encryptionKitManager.hashToHex(text = text, algorithm = EncryptionkitManager.HashAlgorithm.SHA_256)
                 .onSuccess { hash ->
                     _uiState.value = ShowcaseUiState.Success("SHA-256 Hash: $hash")
                 }
@@ -86,7 +86,7 @@ class ShowcaseViewModel @Inject constructor(
 
     fun hashMD5(text: String) {
         viewModelScope.launch {
-            encryptionKitManager.hashToHex(text = text, algorithm = "MD5")
+            encryptionKitManager.hashToHex(text = text, algorithm = EncryptionkitManager.HashAlgorithm.MD5)
                 .onSuccess { hash ->
                     _uiState.value = ShowcaseUiState.Success("MD5 Hash: $hash")
                 }

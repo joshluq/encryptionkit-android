@@ -5,7 +5,6 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import es.joshluq.encryptionkit.domain.model.CryptoException
-import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import java.security.GeneralSecurityException
 import java.security.Key
@@ -28,30 +27,47 @@ internal class KeystoreDataSource {
         load(null)
     }
 
-    fun ensureKeyExists(config: EncryptionConfig) {
+    fun ensureKeyExists(
+        alias: String,
+        requireUserAuth: Boolean,
+        useStrongBox: Boolean
+    ) {
         try {
-            if (!keyStore.containsAlias(config.alias)) {
-                generateKey(config)
+            if (!keyStore.containsAlias(alias)) {
+                generateKey(alias, requireUserAuth, useStrongBox)
             }
         } catch (e: GeneralSecurityException) {
-            throw CryptoException("Keystore access failed", e, CryptoException.Reason.KEY_GENERATION_FAILED)
+            throw CryptoException(
+                "Keystore access failed",
+                e,
+                CryptoException.Reason.KEY_GENERATION_FAILED
+            )
         }
     }
 
-    private fun generateKey(config: EncryptionConfig) {
+    private fun generateKey(
+        alias: String,
+        requireUserAuth: Boolean,
+        useStrongBox: Boolean
+    ) {
         try {
-            generateKeyInternal(config, config.useStrongBox)
+            generateKeyInternal(alias, requireUserAuth, useStrongBox)
         } catch (e: GeneralSecurityException) {
-            attemptFallback(config, e)
+            attemptFallback(alias, requireUserAuth, useStrongBox, e)
         } catch (e: ProviderException) {
-            attemptFallback(config, e)
+            attemptFallback(alias, requireUserAuth, useStrongBox, e)
         }
     }
 
-    private fun attemptFallback(config: EncryptionConfig, originalError: Exception) {
-        if (config.useStrongBox) {
+    private fun attemptFallback(
+        alias: String,
+        requireUserAuth: Boolean,
+        useStrongBox: Boolean,
+        originalError: Exception
+    ) {
+        if (useStrongBox) {
             try {
-                generateKeyInternal(config, false)
+                generateKeyInternal(alias, requireUserAuth, false)
             } catch (fallbackEx: GeneralSecurityException) {
                 throw CryptoException(
                     "Key gen fallback failed",
@@ -66,14 +82,23 @@ internal class KeystoreDataSource {
                 )
             }
         } else {
-            throw CryptoException("Key gen failed", originalError, CryptoException.Reason.KEY_GENERATION_FAILED)
+            throw CryptoException(
+                "Key gen failed",
+                originalError,
+                CryptoException.Reason.KEY_GENERATION_FAILED
+            )
         }
     }
 
-    private fun generateKeyInternal(config: EncryptionConfig, useStrongBox: Boolean) {
-        val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+    private fun generateKeyInternal(
+        alias: String,
+        requireUserAuth: Boolean,
+        useStrongBox: Boolean
+    ) {
+        val keyGenerator =
+            KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
         val builder = KeyGenParameterSpec.Builder(
-            config.alias,
+            alias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         )
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -81,7 +106,7 @@ internal class KeystoreDataSource {
             .setKeySize(KEY_SIZE)
             .setRandomizedEncryptionRequired(true)
 
-        if (config.requireUserAuth) {
+        if (requireUserAuth) {
             builder.setUserAuthenticationRequired(true)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 builder.setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
