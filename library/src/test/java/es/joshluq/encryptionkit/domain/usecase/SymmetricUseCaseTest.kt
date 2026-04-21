@@ -1,7 +1,7 @@
 package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.CryptoResult
-import es.joshluq.encryptionkit.sdk.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -18,7 +18,7 @@ class SymmetricUseCaseTest {
     private val encryptUseCase = EncryptSymmetricUseCase(repository)
     private val decryptUseCase = DecryptSymmetricUseCase(repository)
     
-    private val config = EncryptionConfig("test_alias", useStrongBox = false, requireUserAuth = false)
+    private val config = EncryptionkitConfig("test_alias", useStrongBox = false, requireUserAuth = false)
     private val data = "hello".toByteArray()
     private val ciphertext = "encrypted".toByteArray()
     private val iv = "iv123".toByteArray()

@@ -11,18 +11,19 @@ Encryptionkit is a high-performance, security-focused library for Android design
 - **Zero-Trust Memory**: Optimized handling of sensitive data using **`SecureBytes`** to explicitly wipe data from memory after use.
 - **Asymmetric Encryption**: Support for **RSA-OAEP (SHA-256)** with optional **Public Key Pinning** to prevent Man-in-the-Middle attacks.
 - **Integrity & Hashing**: Secure one-way hashing (**SHA-256**, **MD5**) for data integrity verification and fingerprinting.
-- **Asynchronous API**: Non-blocking operations using Coroutines and Callbacks for a smooth UI experience.
-- **Clean Architecture**: Decoupled design with a simplified Builder pattern, removing the need for dependency injection frameworks in the consumer app.
+- **Clean Architecture & Zero-DI**: Decoupled design following Clean Architecture with an **Internal Dependency Graph** pattern, ensuring a zero-dependency footprint (no Dagger, Hilt, or Koin needed).
 
 ## 🏗 Architecture
 
-Encryptionkit follows a strict **Clean Architecture** to ensure that cryptographic logic is isolated, testable, and secure.
+Encryptionkit follows a strict **Clean Architecture** to ensure that cryptographic logic is isolated, testable, and secure. It implements an internal dependency graph for pure Kotlin dependency injection.
 
 ```mermaid
 graph TD
     subgraph "SDK Layer (Public API)"
+        Config[EncryptionConfig]
         Builder[EncryptionkitManager.Builder]
         Facade[EncryptionkitManager Facade]
+        Component[EncryptionComponent - Internal DI]
     end
 
     subgraph "Domain Layer (Pure Kotlin)"
@@ -42,8 +43,10 @@ graph TD
         TEE["TEE / StrongBox"]
     end
 
+    Builder -- configures --> Config
     Builder -- constructs --> Facade
-    Facade -- delegates to --> UC
+    Facade -- initializes --> Component
+    Component -- instantiates lazy --> UC
     UC -- uses --> RepoInterface
     RepoImpl -- implements --> RepoInterface
     RepoImpl --> KS_DS
@@ -55,103 +58,82 @@ graph TD
 ## 🛠 Usage Example
 
 ### 1. Initialize
-Initialize the library using the Builder. No `Context` is required for the builder itself.
+Initialize the library using the Builder DSL.
 
 ```kotlin
-val encryptionManager = EncryptionkitManager.Builder()
-    .setAlias("my_app_secure_key")
-    .useStrongBox(true) // Prefer Secure Element
-    .setRequireUserAuthentication(false)
-    .build()
+val config = EncryptionConfig.build {
+    alias = "my_app_secure_key"
+    useStrongBox = true // Prefer Secure Element
+    requireUserAuth = false
+}
+
+val encryptionManager = EncryptionkitManager.Builder().build(config)
 ```
 
 ### 2. Encrypt Sensitive Data (Securely)
-Use `SecureBytes` to ensure sensitive data is wiped from memory. Operations are asynchronous.
+Use `SecureBytes` to ensure sensitive data is wiped from memory. Operations are asynchronous (suspend functions).
 
 ```kotlin
 val sensitiveData = "Top Secret".toByteArray()
 val secureBytes = SecureBytes(sensitiveData)
 
-encryptionManager.encrypt(
-    secureData = secureBytes,
-    onSuccess = { result ->
-        // 'result' contains ciphertext and IV
-        // IMPORTANT: Wipe memory after success
-        secureBytes.close()
-    },
-    onError = { error ->
-        // Handle error (e.g., CryptoException.Reason.USER_NOT_AUTHENTICATED)
-        secureBytes.close()
-    }
-)
+val result = encryptionManager.encrypt(secureBytes)
+result.onSuccess { cryptoResult ->
+    // cryptoResult contains ciphertext and IV
+}.onFailure { error ->
+    // Handle error (e.g., CryptoException)
+}
+
+// IMPORTANT: Wipe memory after use
+secureBytes.close()
 ```
 
 ### 3. Decrypt
 Retrieve the original information using the stored ciphertext and IV.
 
 ```kotlin
-encryptionManager.decrypt(
-    ciphertext = encryptedBytes,
-    iv = iv,
-    onSuccess = { decryptedBytes ->
-        val originalString = String(decryptedBytes)
-    },
-    onError = { error ->
-        // Handle decryption errors (integrity check failed)
-    }
-)
+val result = encryptionManager.decrypt(ciphertext, iv)
+result.onSuccess { decryptedBytes ->
+    val originalString = String(decryptedBytes)
+}
 ```
 
 ### 4. Asymmetric Encryption (RSA) with Pinning
 Encrypt data for a backend server using its public key.
 
 ```kotlin
-val builder = EncryptionkitManager.Builder()
-    .setCertificatePathProvider(MyCertProvider())
-    .setPublicKeyPinning("a1b2c3d4...") // Fingerprint validation
-    .build()
+val config = EncryptionConfig.build {
+    certificatePathProvider = MyCertProvider()
+    setPublicKeyPinning("a1b2c3d4...") // Fingerprint validation
+}
+val manager = EncryptionkitManager.Builder().build(config)
 
-builder.encryptWithPublicKey(
-    data = payload,
-    onSuccess = { encrypted -> /* Send to server */ },
-    onError = { e -> /* Handle MITM or loading error */ }
-)
+val result = manager.encryptWithPublicKey(payload)
 ```
 
 ### 5. Hashing
 Generate a secure fingerprint of data (SHA-256 by default).
 
 ```kotlin
-encryptionManager.hashToHex(
-    text = "Important Data",
-    onSuccess = { hash ->
-        // e.g., "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
-    },
-    onError = { e -> /* Handle error */ }
-)
+val hashResult = encryptionManager.hashToHex("Important Data")
+// e.g., "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
 ```
 
 ### 6. Security Management
 Verify the hardware security level or delete the key.
 
 ```kotlin
-// Check Security Level
-encryptionManager.getSecurityLevel(
-    onSuccess = { level ->
-        // level can be STRONG_BOX, TRUSTED_ENVIRONMENT, or SOFTWARE
-    }
-)
+// Check Security Level (STRONGBOX, TRUSTED_ENVIRONMENT, or SOFTWARE)
+val level = encryptionManager.getSecurityLevel()
 
 // Delete Key
-encryptionManager.deleteKey(
-    onComplete = { /* Key deleted */ }
-)
+encryptionManager.deleteKey()
 ```
 
 ## 📂 Project Structure
 
 - `:library` (`es.joshluq.encryptionkit`)
-    - `sdk`: Public API Facade (`EncryptionkitManager`) and Builder.
+    - `sdk`: Public API Facade, Configuration, and Internal DI.
     - `domain`: Pure Kotlin business logic (`model`, `usecase`, `repository`, `provider`).
     - `data`: Android-specific implementations (`datasource`, `repository impl`).
 - `:showcase`: A sample app demonstrating all features, including TEE verification and secure memory usage.
@@ -159,8 +141,8 @@ encryptionManager.deleteKey(
 ## 🧪 Quality Assurance
 
 - **Compliance**: Strictly follows **NIST** and **Android Security** best practices.
-- **KDocs**: 100% complete API documentation.
-- **Testing**: Comprehensive suite of unit tests for all layers (SDK, Domain, Data).
+- **Internal DI Graph**: Zero-dependency footprint using pure Kotlin lazy instantiation.
+- **Testing**: Comprehensive suite of unit tests for all layers, including Keystore hardware simulation.
 
 ---
 

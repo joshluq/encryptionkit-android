@@ -1,7 +1,7 @@
 package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
-import es.joshluq.encryptionkit.sdk.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.foundationkit.usecase.NoneOutput
 import es.joshluq.foundationkit.usecase.UseCase
 import es.joshluq.foundationkit.usecase.UseCaseInput
@@ -15,5 +15,5 @@ internal class InitializeLibraryUseCase(
         NoneOutput
     }
 
-    data class Input(val config: EncryptionConfig) : UseCaseInput
+    data class Input(val config: EncryptionkitConfig) : UseCaseInput
 }

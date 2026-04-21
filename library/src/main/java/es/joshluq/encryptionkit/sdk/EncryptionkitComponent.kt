@@ -16,7 +16,7 @@ import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
  * Internal Dependency Injection container for the Encryption module.
  * Following the Internal Dependency Graph pattern.
  */
-internal open class EncryptionComponent(val config: EncryptionConfig) {
+internal open class EncryptionkitComponent(val config: EncryptionkitConfig) {
 
     private val keystoreDataSource: KeystoreDataSource by lazy {
         KeystoreDataSource()
