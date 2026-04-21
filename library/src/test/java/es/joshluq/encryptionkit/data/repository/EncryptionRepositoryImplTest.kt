@@ -9,12 +9,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.security.Key
 import java.security.PublicKey
-import javax.crypto.SecretKey
 
 class EncryptionRepositoryImplTest {
 

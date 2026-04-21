@@ -1,6 +1,5 @@
 package es.joshluq.encryptionkit.data.datasource
 
-import es.joshluq.encryptionkit.sdk.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import io.mockk.every
 import io.mockk.mockk
@@ -14,6 +13,7 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.security.KeyStore
+import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
 class KeystoreDataSourceTest {
@@ -66,13 +66,13 @@ class KeystoreDataSourceTest {
 
     @Test
     fun `ensureKeyExists should not generate key if it already exists`() {
-        val config = EncryptionConfig("existing_alias", false, false)
-        every { mockKeyStore.containsAlias(config.alias) } returns true
+        val alias = "existing_alias"
+        every { mockKeyStore.containsAlias(alias) } returns true
 
-        dataSource.ensureKeyExists(config)
+        dataSource.ensureKeyExists(alias, requireUserAuth = false, useStrongBox = false)
 
-        // verify no key generation was attempted (internal call check)
-        verify(exactly = 0) { mockKeyStore.deleteEntry(any()) } // placeholder check
+        mockkStatic(KeyGenerator::class)
+        verify(exactly = 0) { KeyGenerator.getInstance(any(), any<String>()) }
     }
 
     @Test
@@ -83,4 +83,5 @@ class KeystoreDataSourceTest {
         
         assertEquals(SecurityLevel.SOFTWARE, level)
     }
+
 }
