@@ -1,8 +1,8 @@
 package es.joshluq.encryptionkit.domain.repository
 
 import es.joshluq.encryptionkit.domain.model.CryptoResult
-import es.joshluq.encryptionkit.domain.model.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
+import es.joshluq.encryptionkit.sdk.EncryptionConfig
 import java.security.PublicKey
 
 internal interface EncryptionRepository {

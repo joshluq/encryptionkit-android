@@ -3,7 +3,7 @@ package es.joshluq.encryptionkit.data.repository
 import es.joshluq.encryptionkit.data.datasource.FileDataSource
 import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
-import es.joshluq.encryptionkit.domain.model.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import io.mockk.every
 import io.mockk.mockk

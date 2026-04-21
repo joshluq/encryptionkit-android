@@ -1,7 +1,7 @@
 package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.CryptoResult
-import es.joshluq.encryptionkit.domain.model.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionConfig
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import io.mockk.every
 import io.mockk.mockk
