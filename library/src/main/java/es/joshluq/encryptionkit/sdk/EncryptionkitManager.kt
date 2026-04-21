@@ -24,11 +24,11 @@ import kotlinx.coroutines.launch
  * operations like symmetric encryption (AES-GCM), asymmetric encryption (RSA-OAEP), and hashing.
  */
 class EncryptionkitManager internal constructor(
-    private val componentFactory: (EncryptionConfig) -> EncryptionComponent = { EncryptionComponent(it) }
-) : Manager<EncryptionConfig>() {
+    private val componentFactory: (EncryptionkitConfig) -> EncryptionkitComponent = { EncryptionkitComponent(it) }
+) : Manager<EncryptionkitConfig>() {
 
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private lateinit var component: EncryptionComponent
+    private lateinit var component: EncryptionkitComponent
 
     /**
      * Supported hashing algorithms for the SDK.
@@ -38,7 +38,7 @@ class EncryptionkitManager internal constructor(
         MD5("MD5")
     }
 
-    fun initialize(config: EncryptionConfig) {
+    fun initialize(config: EncryptionkitConfig) {
         this.config = config
         this.component = componentFactory(config)
         managerScope.launch {
@@ -122,8 +122,8 @@ class EncryptionkitManager internal constructor(
     /**
      * Builder class for creating [EncryptionkitManager] instances.
      */
-    class Builder : ManagerBuilder<EncryptionConfig> {
-        override fun build(config: EncryptionConfig): EncryptionkitManager {
+    class Builder : ManagerBuilder<EncryptionkitConfig> {
+        override fun build(config: EncryptionkitConfig): EncryptionkitManager {
             return EncryptionkitManager().apply {
                 initialize(config)
             }

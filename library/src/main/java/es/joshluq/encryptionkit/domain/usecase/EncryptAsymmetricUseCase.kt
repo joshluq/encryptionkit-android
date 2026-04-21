@@ -2,7 +2,7 @@ package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
-import es.joshluq.encryptionkit.sdk.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.foundationkit.usecase.UseCase
 import es.joshluq.foundationkit.usecase.UseCaseInput
 import es.joshluq.foundationkit.usecase.UseCaseOutput
@@ -23,7 +23,7 @@ internal class EncryptAsymmetricUseCase(
     data class Input(
         val data: ByteArray? = null,
         val secureData: SecureBytes? = null,
-        val config: EncryptionConfig
+        val config: EncryptionkitConfig
     ) : UseCaseInput {
 
         override fun equals(other: Any?): Boolean {

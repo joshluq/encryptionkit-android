@@ -1,6 +1,6 @@
 package es.joshluq.encryptionkit.domain.usecase
 
-import es.joshluq.encryptionkit.sdk.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import io.mockk.every
@@ -20,7 +20,7 @@ class ManagementUseCaseTest {
     @Test
     fun `InitializeLibraryUseCase should call repository initializeKey`() = runBlocking {
         val useCase = InitializeLibraryUseCase(repository)
-        val config = EncryptionConfig("alias", false, false)
+        val config = EncryptionkitConfig("alias", false, false)
         val input = InitializeLibraryUseCase.Input(config)
         every { repository.initializeKey(config) } just runs
 

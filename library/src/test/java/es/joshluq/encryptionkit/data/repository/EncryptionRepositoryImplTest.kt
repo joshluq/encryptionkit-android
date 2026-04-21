@@ -3,7 +3,7 @@ package es.joshluq.encryptionkit.data.repository
 import es.joshluq.encryptionkit.data.datasource.FileDataSource
 import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
-import es.joshluq.encryptionkit.sdk.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import io.mockk.every
 import io.mockk.mockk
@@ -19,7 +19,7 @@ class EncryptionRepositoryImplTest {
     private val fileDataSource: FileDataSource = mockk()
     private val repository = EncryptionRepositoryImpl(keystoreDataSource, fileDataSource)
 
-    private val config = EncryptionConfig("alias", false, false)
+    private val config = EncryptionkitConfig("alias", false, false)
 
     @Test
     fun `getSecurityLevel should delegate to keystoreDataSource`() {

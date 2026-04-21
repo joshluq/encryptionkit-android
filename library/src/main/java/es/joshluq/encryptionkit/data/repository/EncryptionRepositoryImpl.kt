@@ -8,7 +8,7 @@ import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
-import es.joshluq.encryptionkit.sdk.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.MessageDigest
@@ -32,7 +32,7 @@ internal class EncryptionRepositoryImpl(
     private val aesTransformation = "AES/GCM/NoPadding"
     private val rsaTransformation = "RSA/ECB/OAEPPadding"
 
-    override fun initializeKey(config: EncryptionConfig) {
+    override fun initializeKey(config: EncryptionkitConfig) {
         try {
             keystoreDataSource.ensureKeyExists(
                 config.alias,
@@ -46,7 +46,7 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override fun encryptSymmetric(data: ByteArray, config: EncryptionConfig): CryptoResult {
+    override fun encryptSymmetric(data: ByteArray, config: EncryptionkitConfig): CryptoResult {
         try {
             val key = keystoreDataSource.getKey(config.alias)
                 ?: throw CryptoException("Key not found", reason = CryptoException.Reason.KEY_NOT_FOUND)
@@ -61,7 +61,7 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, config: EncryptionConfig): ByteArray {
+    override fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, config: EncryptionkitConfig): ByteArray {
         try {
             val key = keystoreDataSource.getKey(config.alias)
                 ?: throw CryptoException("Key not found", reason = CryptoException.Reason.KEY_NOT_FOUND)
@@ -94,7 +94,7 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override suspend fun encryptAsymmetric(data: ByteArray, config: EncryptionConfig): ByteArray {
+    override suspend fun encryptAsymmetric(data: ByteArray, config: EncryptionkitConfig): ByteArray {
         try {
             val publicKey = getPublicKey()
 

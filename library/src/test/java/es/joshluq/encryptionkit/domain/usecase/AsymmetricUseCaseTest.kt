@@ -1,6 +1,6 @@
 package es.joshluq.encryptionkit.domain.usecase
 
-import es.joshluq.encryptionkit.sdk.EncryptionConfig
+import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import io.mockk.coEvery
@@ -16,7 +16,7 @@ class AsymmetricUseCaseTest {
     private val repository: EncryptionRepository = mockk()
     private val useCase = EncryptAsymmetricUseCase(repository)
     
-    private val config = EncryptionConfig("alias", false, false)
+    private val config = EncryptionkitConfig("alias", false, false)
     private val data = "secret".toByteArray()
     private val encrypted = "rsa_encrypted".toByteArray()
 

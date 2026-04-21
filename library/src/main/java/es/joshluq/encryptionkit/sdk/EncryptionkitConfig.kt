@@ -12,7 +12,7 @@ import es.joshluq.foundationkit.manager.ManagerConfig
  * @property publicKeyHash Optional SHA-256 hash (Hex) of the expected public key for pinning validation.
  * @property certificatePathProvider Provider for the X.509 certificate path.
  */
-data class EncryptionConfig(
+data class EncryptionkitConfig(
     val alias: String,
     val useStrongBox: Boolean,
     val requireUserAuth: Boolean,
@@ -22,14 +22,14 @@ data class EncryptionConfig(
 
     companion object {
         /**
-         * DSL entry point for creating an [EncryptionConfig] instance.
+         * DSL entry point for creating an [EncryptionkitConfig] instance.
          */
-        inline fun build(block: Builder.() -> Unit): EncryptionConfig =
+        inline fun build(block: Builder.() -> Unit): EncryptionkitConfig =
             Builder().apply(block).build()
     }
 
     /**
-     * Builder class for creating [EncryptionConfig] instances with Kotlin DSL support.
+     * Builder class for creating [EncryptionkitConfig] instances with Kotlin DSL support.
      */
     class Builder {
         var alias: String = "encryption_kit_default_key"
@@ -38,7 +38,7 @@ data class EncryptionConfig(
         var publicKeyHash: String? = null
         var certificatePathProvider: CertificatePathProvider? = null
 
-        fun build() = EncryptionConfig(
+        fun build() = EncryptionkitConfig(
             alias = alias,
             useStrongBox = useStrongBox,
             requireUserAuth = requireUserAuth,

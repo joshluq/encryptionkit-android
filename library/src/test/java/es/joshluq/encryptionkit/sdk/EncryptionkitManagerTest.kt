@@ -21,7 +21,7 @@ class EncryptionkitManagerTest {
     private val deleteKeyUseCase: DeleteKeyUseCase = mockk()
     private val hashDataUseCase: HashDataUseCase = mockk()
 
-    private val config = EncryptionConfig("test_alias", false, false)
+    private val config = EncryptionkitConfig("test_alias", false, false)
 
     private lateinit var manager: EncryptionkitManager
 
@@ -30,7 +30,7 @@ class EncryptionkitManagerTest {
         // We use the internal constructor to inject a mocked component (Testing Backdoor)
         manager = EncryptionkitManager(
             componentFactory = {
-                object : EncryptionComponent(it) {
+                object : EncryptionkitComponent(it) {
                     override val initializeLibraryUseCase = this@EncryptionkitManagerTest.initializeLibraryUseCase
                     override val encryptSymmetricUseCase = this@EncryptionkitManagerTest.encryptSymmetricUseCase
                     override val decryptSymmetricUseCase = this@EncryptionkitManagerTest.decryptSymmetricUseCase
