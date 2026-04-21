@@ -1,15 +1,7 @@
 package es.joshluq.encryptionkit.sdk
 
-import es.joshluq.encryptionkit.domain.model.CryptoException
-import es.joshluq.encryptionkit.domain.model.CryptoResult
-import es.joshluq.encryptionkit.domain.model.SecureBytes
-import es.joshluq.encryptionkit.domain.usecase.DecryptSymmetricUseCase
-import es.joshluq.encryptionkit.domain.usecase.DeleteKeyUseCase
-import es.joshluq.encryptionkit.domain.usecase.EncryptAsymmetricUseCase
-import es.joshluq.encryptionkit.domain.usecase.EncryptSymmetricUseCase
-import es.joshluq.encryptionkit.domain.usecase.GetSecurityLevelUseCase
-import es.joshluq.encryptionkit.domain.usecase.HashDataUseCase
-import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
+import es.joshluq.encryptionkit.domain.model.*
+import es.joshluq.encryptionkit.domain.usecase.*
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
@@ -94,6 +86,40 @@ class EncryptionkitManagerTest {
     }
 
     @Test
+    fun `getSecurityLevel should return success result when successful`() = runBlocking {
+        val expectedLevel = SecurityLevel.STRONGBOX
+
+        coEvery { getSecurityLevelUseCase(any()) } returns Result.success(GetSecurityLevelUseCase.Output(expectedLevel))
+
+        val result = manager.getSecurityLevel()
+
+        assertTrue(result.isSuccess)
+        assertEquals(expectedLevel, result.getOrNull())
+    }
+
+    @Test
+    fun `deleteKey should return success when successful`() = runBlocking {
+        coEvery { deleteKeyUseCase(any()) } returns Result.success(es.joshluq.foundationkit.usecase.NoneOutput)
+
+        val result = manager.deleteKey()
+
+        assertTrue(result.isSuccess)
+    }
+
+    @Test
+    fun `hash should return success result when successful`() = runBlocking {
+        val data = byteArrayOf(1, 2, 3)
+        val expectedHash = byteArrayOf(4, 5, 6)
+
+        coEvery { hashDataUseCase(any()) } returns Result.success(HashDataUseCase.Output(expectedHash))
+
+        val result = manager.hash(data)
+
+        assertTrue(result.isSuccess)
+        assertArrayEquals(expectedHash, result.getOrNull())
+    }
+
+    @Test
     fun `hashToHex should return hex string result`() = runBlocking {
         val text = "test"
         val mockHash = byteArrayOf(0x00, 0xff.toByte())
@@ -118,14 +144,5 @@ class EncryptionkitManagerTest {
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is CryptoException)
         assertEquals("Encryption failed", result.exceptionOrNull()?.message)
-    }
-
-    @Test
-    fun `deleteKey should return success when successful`() = runBlocking {
-        coEvery { deleteKeyUseCase(any()) } returns Result.success(es.joshluq.foundationkit.usecase.NoneOutput)
-
-        val result = manager.deleteKey()
-
-        assertTrue(result.isSuccess)
     }
 }

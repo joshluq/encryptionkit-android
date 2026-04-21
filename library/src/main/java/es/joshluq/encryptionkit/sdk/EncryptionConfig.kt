@@ -38,14 +38,6 @@ data class EncryptionConfig(
         var publicKeyHash: String? = null
         var certificatePathProvider: CertificatePathProvider? = null
 
-        fun setAlias(alias: String) = apply { this.alias = alias }
-        fun useStrongBox(useStrongBox: Boolean) = apply { this.useStrongBox = useStrongBox }
-        fun setRequireUserAuthentication(require: Boolean) = apply { this.requireUserAuth = require }
-        fun setCertificatePathProvider(provider: CertificatePathProvider) = apply {
-            this.certificatePathProvider = provider
-        }
-        fun setPublicKeyPinning(sha256Hash: String) = apply { this.publicKeyHash = sha256Hash }
-
         fun build() = EncryptionConfig(
             alias = alias,
             useStrongBox = useStrongBox,
