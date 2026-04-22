@@ -1,7 +1,6 @@
 package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
-import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.foundationkit.usecase.UseCase
 import es.joshluq.foundationkit.usecase.UseCaseInput
 import es.joshluq.foundationkit.usecase.UseCaseOutput
@@ -11,14 +10,14 @@ internal class DecryptSymmetricUseCase(
 ) : UseCase<DecryptSymmetricUseCase.Input, DecryptSymmetricUseCase.Output> {
 
     override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val result = repository.decryptSymmetric(input.ciphertext, input.iv, input.config)
+        val result = repository.decryptSymmetric(input.ciphertext, input.iv, input.alias)
         Output(result)
     }
 
     data class Input(
         val ciphertext: ByteArray,
         val iv: ByteArray,
-        val config: EncryptionkitConfig
+        val alias: String
     ) : UseCaseInput {
 
         override fun equals(other: Any?): Boolean {
@@ -29,7 +28,7 @@ internal class DecryptSymmetricUseCase(
 
             if (!ciphertext.contentEquals(other.ciphertext)) return false
             if (!iv.contentEquals(other.iv)) return false
-            if (config != other.config) return false
+            if (alias != other.alias) return false
 
             return true
         }
@@ -37,7 +36,7 @@ internal class DecryptSymmetricUseCase(
         override fun hashCode(): Int {
             var result = ciphertext.contentHashCode()
             result = 31 * result + iv.contentHashCode()
-            result = 31 * result + config.hashCode()
+            result = 31 * result + alias.hashCode()
             return result
         }
     }

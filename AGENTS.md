@@ -29,14 +29,14 @@ Decouples the domain layer from data sources.
 - **Example:**
 ```kotlin
 interface EncryptionRepository {
-    suspend fun encryptSymmetric(data: ByteArray, config: EncryptionConfig): CryptoResult
+    fun encryptSymmetric(data: ByteArray, alias: String): CryptoResult
 }
 
 internal class EncryptionRepositoryImpl(
     private val keystoreDataSource: KeystoreDataSource,
     private val fileDataSource: FileDataSource
 ) : EncryptionRepository {
-    override suspend fun encryptSymmetric(...) { /* implementation */ }
+    override fun encryptSymmetric(...) { /* implementation */ }
 }
 ```
 
@@ -49,10 +49,10 @@ internal class EncryptSymmetricUseCase(
     private val repository: EncryptionRepository
 ) : UseCase<EncryptSymmetricUseCase.Input, EncryptSymmetricUseCase.Output> {
     override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val result = repository.encryptSymmetric(input.data, input.config)
+        val result = repository.encryptSymmetric(input.data, input.alias)
         Output(result)
     }
-    data class Input(val data: ByteArray, val config: EncryptionConfig) : UseCaseInput
+    data class Input(val data: ByteArray, val alias: String) : UseCaseInput
     data class Output(val result: CryptoResult) : UseCaseOutput
 }
 ```
@@ -70,10 +70,10 @@ We **strictly prohibit** external DI frameworks (Dagger, Hilt, Koin). Use this p
 ### Template:
 ```kotlin
 // 1. Public Config
-class EncryptionConfig(...) : ManagerConfig
+class EncryptionkitConfig(...) : ManagerConfig
 
 // 2. Internal DI Container
-internal open class EncryptionComponent(val config: EncryptionConfig) {
+internal open class EncryptionkitComponent(val config: EncryptionkitConfig) {
     private val repository: EncryptionRepository by lazy { 
         EncryptionRepositoryImpl(KeystoreDataSource(), FileDataSource()) 
     }
@@ -84,16 +84,16 @@ internal open class EncryptionComponent(val config: EncryptionConfig) {
 
 // 3. Public Facade
 class EncryptionkitManager internal constructor(
-    private val componentFactory: (EncryptionConfig) -> EncryptionComponent = { EncryptionComponent(it) }
-) : Manager<EncryptionConfig>() {
-    private var component: EncryptionComponent? = null
+    private val componentFactory: (EncryptionkitConfig) -> EncryptionkitComponent = { EncryptionkitComponent(it) }
+) : Manager<EncryptionkitConfig>() {
+    private lateinit var component: EncryptionkitComponent
 
-    fun initialize(config: EncryptionConfig) {
+    fun initialize(config: EncryptionkitConfig) {
         this.config = config
         this.component = componentFactory(config)
     }
 
-    suspend fun encrypt(data: ByteArray) = component!!.encryptUseCase(Input(data, config))
+    suspend fun encrypt(data: ByteArray) = component.encryptUseCase(Input(data, config.alias))
 }
 ```
 

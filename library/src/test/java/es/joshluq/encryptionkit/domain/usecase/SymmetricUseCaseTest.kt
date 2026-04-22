@@ -27,8 +27,9 @@ class SymmetricUseCaseTest {
     @Test
     fun `EncryptSymmetricUseCase should delegate to repository`() = runBlocking {
         // Given
-        every { repository.encryptSymmetric(data, config) } returns cryptoResult
-        val input = EncryptSymmetricUseCase.Input(data, config)
+        val alias = "test_alias"
+        every { repository.encryptSymmetric(data, alias) } returns cryptoResult
+        val input = EncryptSymmetricUseCase.Input(data, alias)
 
         // When
         val result = encryptUseCase(input)
@@ -36,14 +37,15 @@ class SymmetricUseCaseTest {
         // Then
         assertTrue(result.isSuccess)
         assertEquals(cryptoResult, result.getOrNull()?.result)
-        verify { repository.encryptSymmetric(data, config) }
+        verify { repository.encryptSymmetric(data, alias) }
     }
 
     @Test
     fun `DecryptSymmetricUseCase should delegate to repository`() = runBlocking {
         // Given
-        every { repository.decryptSymmetric(ciphertext, iv, config) } returns data
-        val input = DecryptSymmetricUseCase.Input(ciphertext, iv, config)
+        val alias = "test_alias"
+        every { repository.decryptSymmetric(ciphertext, iv, alias) } returns data
+        val input = DecryptSymmetricUseCase.Input(ciphertext, iv, alias)
 
         // When
         val result = decryptUseCase(input)
@@ -51,6 +53,6 @@ class SymmetricUseCaseTest {
         // Then
         assertTrue(result.isSuccess)
         assertArrayEquals(data, result.getOrNull()?.data)
-        verify { repository.decryptSymmetric(ciphertext, iv, config) }
+        verify { repository.decryptSymmetric(ciphertext, iv, alias) }
     }
 }

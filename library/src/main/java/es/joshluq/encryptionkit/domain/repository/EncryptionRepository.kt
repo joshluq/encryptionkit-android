@@ -7,11 +7,11 @@ import java.security.PublicKey
 
 internal interface EncryptionRepository {
     fun initializeKey(config: EncryptionkitConfig)
-    fun encryptSymmetric(data: ByteArray, config: EncryptionkitConfig): CryptoResult
-    fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, config: EncryptionkitConfig): ByteArray
+    fun encryptSymmetric(data: ByteArray, alias: String): CryptoResult
+    fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, alias: String): ByteArray
     fun getSecurityLevel(alias: String): SecurityLevel
     fun deleteKey(alias: String)
     suspend fun getPublicKey(): PublicKey
-    suspend fun encryptAsymmetric(data: ByteArray, config: EncryptionkitConfig): ByteArray
+    suspend fun encryptAsymmetric(data: ByteArray, publicKeyHash: String): ByteArray
     fun hash(data: ByteArray, algorithm: String): ByteArray
 }
