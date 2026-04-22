@@ -46,9 +46,9 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override fun encryptSymmetric(data: ByteArray, config: EncryptionkitConfig): CryptoResult {
+    override fun encryptSymmetric(data: ByteArray, alias: String): CryptoResult {
         try {
-            val key = keystoreDataSource.getKey(config.alias)
+            val key = keystoreDataSource.getKey(alias)
                 ?: throw CryptoException("Key not found", reason = CryptoException.Reason.KEY_NOT_FOUND)
 
             val cipher = Cipher.getInstance(aesTransformation)
@@ -61,9 +61,9 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, config: EncryptionkitConfig): ByteArray {
+    override fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, alias: String): ByteArray {
         try {
-            val key = keystoreDataSource.getKey(config.alias)
+            val key = keystoreDataSource.getKey(alias)
                 ?: throw CryptoException("Key not found", reason = CryptoException.Reason.KEY_NOT_FOUND)
 
             val cipher = Cipher.getInstance(aesTransformation)
@@ -94,18 +94,20 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override suspend fun encryptAsymmetric(data: ByteArray, config: EncryptionkitConfig): ByteArray {
+    override suspend fun encryptAsymmetric(data: ByteArray, publicKeyHash: String): ByteArray {
         try {
             val publicKey = getPublicKey()
 
-            config.publicKeyHash?.let { expectedHash ->
-                val currentHash = hash(publicKey.encoded, "SHA-256").joinToString("") { "%02x".format(it) }
-                if (!currentHash.equals(expectedHash, ignoreCase = true)) {
-                    throw CryptoException(
-                        "Public key validation failed. Expected: $expectedHash, Found: $currentHash",
-                        reason = CryptoException.Reason.PUBLIC_KEY_PINNING_FAILURE
-                    )
-                }
+            val currentHash = hash(
+                publicKey.encoded,
+                "SHA-256"
+            ).joinToString("") { "%02x".format(it) }
+
+            if (!currentHash.equals(publicKeyHash, ignoreCase = true)) {
+                throw CryptoException(
+                    "Public key validation failed. Expected: $publicKeyHash, Found: $currentHash",
+                    reason = CryptoException.Reason.PUBLIC_KEY_PINNING_FAILURE
+                )
             }
 
             val cipher = Cipher.getInstance(rsaTransformation)

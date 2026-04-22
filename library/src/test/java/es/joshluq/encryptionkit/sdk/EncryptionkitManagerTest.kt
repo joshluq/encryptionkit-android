@@ -76,6 +76,10 @@ class EncryptionkitManagerTest {
     fun `encryptWithPublicKey should return success result when successful`() = runBlocking {
         val data = "data".toByteArray()
         val expectedCiphertext = "cipher_asym".toByteArray()
+        
+        // Ensure config has public key hash
+        val configWithHash = config.copy(publicKeyHash = "some_hash")
+        manager.initialize(configWithHash)
 
         coEvery { encryptAsymmetricUseCase(any()) } returns Result.success(EncryptAsymmetricUseCase.Output(expectedCiphertext))
 
