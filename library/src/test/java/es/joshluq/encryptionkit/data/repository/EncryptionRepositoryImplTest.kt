@@ -4,7 +4,6 @@ import es.joshluq.encryptionkit.data.datasource.FileDataSource
 import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
-import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -41,12 +40,14 @@ class EncryptionRepositoryImplTest {
 
     @Test
     fun `initializeKey should delegate to keystoreDataSource`() {
-        val config = EncryptionkitConfig("alias", true, true)
-        every { keystoreDataSource.ensureKeyExists("alias", true, true) } returns Unit
+        val alias = "alias"
+        val requireUserAuth = true
+        val useStrongBox = true
+        every { keystoreDataSource.ensureKeyExists(any(), any(), any()) } returns Unit
 
-        repository.initializeKey(config)
+        repository.initializeKey(alias, requireUserAuth, useStrongBox)
 
-        verify { keystoreDataSource.ensureKeyExists("alias", true, true) }
+        verify { keystoreDataSource.ensureKeyExists(alias, requireUserAuth, useStrongBox) }
     }
 
     @Test
