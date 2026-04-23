@@ -42,7 +42,12 @@ class EncryptionkitManager internal constructor(
         this.config = config
         this.component = componentFactory(config)
         managerScope.launch {
-            component.initializeLibraryUseCase(InitializeLibraryUseCase.Input(config))
+            val input = InitializeLibraryUseCase.Input(
+                config.alias,
+                config.requireUserAuth,
+                config.useStrongBox
+            )
+            component.initializeLibraryUseCase(input)
         }
     }
 
