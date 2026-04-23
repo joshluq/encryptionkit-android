@@ -4,6 +4,7 @@ import es.joshluq.encryptionkit.data.datasource.FileDataSource
 import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
+import es.joshluq.foundationkit.log.Loggerkit
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -26,11 +27,12 @@ class EncryptionRepositoryImplTest {
 
     private val keystoreDataSource: KeystoreDataSource = mockk()
     private val fileDataSource: FileDataSource = mockk()
+    private val logger: Loggerkit = mockk(relaxed = true)
     private lateinit var repository: EncryptionRepositoryImpl
 
     @Before
     fun setUp() {
-        repository = EncryptionRepositoryImpl(keystoreDataSource, fileDataSource)
+        repository = EncryptionRepositoryImpl(keystoreDataSource, fileDataSource, logger)
     }
 
     @After

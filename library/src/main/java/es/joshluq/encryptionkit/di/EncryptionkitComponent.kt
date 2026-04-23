@@ -1,9 +1,8 @@
-package es.joshluq.encryptionkit.sdk
+package es.joshluq.encryptionkit.di
 
 import es.joshluq.encryptionkit.data.datasource.FileDataSource
 import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
 import es.joshluq.encryptionkit.data.repository.EncryptionRepositoryImpl
-import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.encryptionkit.domain.usecase.DecryptSymmetricUseCase
 import es.joshluq.encryptionkit.domain.usecase.DeleteKeyUseCase
 import es.joshluq.encryptionkit.domain.usecase.EncryptAsymmetricUseCase
@@ -11,26 +10,28 @@ import es.joshluq.encryptionkit.domain.usecase.EncryptSymmetricUseCase
 import es.joshluq.encryptionkit.domain.usecase.GetSecurityLevelUseCase
 import es.joshluq.encryptionkit.domain.usecase.HashDataUseCase
 import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
+import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
+import es.joshluq.foundationkit.log.Loggerkit
 
 /**
- * Internal Dependency Injection container for the Encryption module.
+ * Internal Dependency Injection component
  * Following the Internal Dependency Graph pattern.
  */
 internal open class EncryptionkitComponent(val config: EncryptionkitConfig) {
+
+    open val logger: Loggerkit by lazy { config.logger }
 
     private val keystoreDataSource: KeystoreDataSource by lazy {
         KeystoreDataSource()
     }
 
     private val fileDataSource: FileDataSource by lazy {
-        val certProvider = config.certificatePathProvider ?: object : CertificatePathProvider {
-            override fun getCertificatePath(): String? = null
-        }
+        val certProvider = config.certificatePathProvider
         FileDataSource(certProvider)
     }
 
     private val repository: EncryptionRepositoryImpl by lazy {
-        EncryptionRepositoryImpl(keystoreDataSource, fileDataSource)
+        EncryptionRepositoryImpl(keystoreDataSource, fileDataSource, logger)
     }
 
     open val initializeLibraryUseCase: InitializeLibraryUseCase by lazy {
