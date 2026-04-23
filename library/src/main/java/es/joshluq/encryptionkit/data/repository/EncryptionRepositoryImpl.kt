@@ -8,7 +8,6 @@ import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
-import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.MessageDigest
@@ -32,13 +31,9 @@ internal class EncryptionRepositoryImpl(
     private val aesTransformation = "AES/GCM/NoPadding"
     private val rsaTransformation = "RSA/ECB/OAEPPadding"
 
-    override fun initializeKey(config: EncryptionkitConfig) {
+    override fun initializeKey(alias: String, requireUserAuth: Boolean, useStrongBox: Boolean) {
         try {
-            keystoreDataSource.ensureKeyExists(
-                config.alias,
-                config.requireUserAuth,
-                config.useStrongBox
-            )
+            keystoreDataSource.ensureKeyExists(alias, requireUserAuth, useStrongBox)
         } catch (e: GeneralSecurityException) {
             throw mapException(e)
         } catch (e: IOException) {
