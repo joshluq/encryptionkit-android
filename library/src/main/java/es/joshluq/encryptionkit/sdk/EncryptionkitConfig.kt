@@ -1,6 +1,8 @@
 package es.joshluq.encryptionkit.sdk
 
+import es.joshluq.encryptionkit.di.EncryptionkitDefaults
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
+import es.joshluq.foundationkit.log.Loggerkit
 import es.joshluq.foundationkit.manager.ManagerConfig
 
 /**
@@ -11,13 +13,15 @@ import es.joshluq.foundationkit.manager.ManagerConfig
  * @property requireUserAuth Require Biometric/PIN authentication.
  * @property publicKeyHash Optional SHA-256 hash (Hex) of the expected public key for pinning validation.
  * @property certificatePathProvider Provider for the X.509 certificate path.
+ * @property logger The logger instance for the SDK.
  */
 data class EncryptionkitConfig(
     val alias: String,
     val useStrongBox: Boolean,
     val requireUserAuth: Boolean,
     val publicKeyHash: String? = null,
-    val certificatePathProvider: CertificatePathProvider? = null
+    val certificatePathProvider: CertificatePathProvider,
+    val logger: Loggerkit,
 ) : ManagerConfig {
 
     companion object {
@@ -36,14 +40,16 @@ data class EncryptionkitConfig(
         var useStrongBox: Boolean = false
         var requireUserAuth: Boolean = false
         var publicKeyHash: String? = null
-        var certificatePathProvider: CertificatePathProvider? = null
+        var certificatePathProvider: CertificatePathProvider = EncryptionkitDefaults.emptyPathProvider
+        var logger: Loggerkit = EncryptionkitDefaults.logger
 
         fun build() = EncryptionkitConfig(
             alias = alias,
             useStrongBox = useStrongBox,
             requireUserAuth = requireUserAuth,
             publicKeyHash = publicKeyHash,
-            certificatePathProvider = certificatePathProvider
+            certificatePathProvider = certificatePathProvider,
+            logger = logger
         )
     }
 }

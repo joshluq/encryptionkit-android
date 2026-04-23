@@ -1,5 +1,6 @@
 package es.joshluq.encryptionkit.sdk
 
+import es.joshluq.encryptionkit.di.EncryptionkitComponent
 import es.joshluq.encryptionkit.domain.model.*
 import es.joshluq.encryptionkit.domain.usecase.*
 import io.mockk.coEvery
@@ -21,7 +22,11 @@ class EncryptionkitManagerTest {
     private val deleteKeyUseCase: DeleteKeyUseCase = mockk()
     private val hashDataUseCase: HashDataUseCase = mockk()
 
-    private val config = EncryptionkitConfig("test_alias", false, false)
+    private val config = EncryptionkitConfig.build {
+        alias = "test_alias"
+        useStrongBox = false
+        requireUserAuth = false
+    }
 
     private lateinit var manager: EncryptionkitManager
 
@@ -38,6 +43,7 @@ class EncryptionkitManagerTest {
                     override val getSecurityLevelUseCase = this@EncryptionkitManagerTest.getSecurityLevelUseCase
                     override val deleteKeyUseCase = this@EncryptionkitManagerTest.deleteKeyUseCase
                     override val hashDataUseCase = this@EncryptionkitManagerTest.hashDataUseCase
+                    override val logger = mockk<es.joshluq.foundationkit.log.Loggerkit>(relaxed = true)
                 }
             }
         )

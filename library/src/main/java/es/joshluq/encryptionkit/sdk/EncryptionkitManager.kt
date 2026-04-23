@@ -1,5 +1,6 @@
 package es.joshluq.encryptionkit.sdk
 
+import es.joshluq.encryptionkit.di.EncryptionkitComponent
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.SecureBytes
@@ -24,8 +25,16 @@ import kotlinx.coroutines.launch
  * operations like symmetric encryption (AES-GCM), asymmetric encryption (RSA-OAEP), and hashing.
  */
 class EncryptionkitManager internal constructor(
-    private val componentFactory: (EncryptionkitConfig) -> EncryptionkitComponent = { EncryptionkitComponent(it) }
+    private val componentFactory: (EncryptionkitConfig) -> EncryptionkitComponent = {
+        EncryptionkitComponent(
+            it
+        )
+    }
 ) : Manager<EncryptionkitConfig>() {
+
+    companion object {
+        private const val TAG = "EncryptionkitManager"
+    }
 
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var component: EncryptionkitComponent
@@ -41,6 +50,7 @@ class EncryptionkitManager internal constructor(
     fun initialize(config: EncryptionkitConfig) {
         this.config = config
         this.component = componentFactory(config)
+        component.logger.i(TAG, "Initializing Encryptionkit SDK with alias: ${config.alias}")
         managerScope.launch {
             val input = InitializeLibraryUseCase.Input(
                 config.alias,
@@ -144,7 +154,11 @@ class EncryptionkitManager internal constructor(
     private fun <T> Result<T>.mapFailure(): Result<T> =
         fold(
             onSuccess = { Result.success(it) },
-            onFailure = { Result.failure(mapToCryptoException(it)) }
+            onFailure = {
+                val exception = mapToCryptoException(it)
+                component.logger.e(TAG, "Operation failed: ${exception.message}", exception)
+                Result.failure(exception)
+            }
         )
 
     private fun mapToCryptoException(e: Throwable): CryptoException {
