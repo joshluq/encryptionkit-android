@@ -21,5 +21,5 @@ configure<ApplicationExtension> {
 
 dependencies {
     implementation(project(":encryptionkit"))
-    implementation("es.joshluq.kit:foundationkit:1.1.0-SNAPSHOT")
+    implementation("es.joshluq.kit:foundationkit:1.1.0")
 }
