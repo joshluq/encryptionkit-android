@@ -14,6 +14,7 @@ import org.junit.Test
 
 class EncryptionkitManagerTest {
 
+    private val component: EncryptionkitComponent = mockk()
     private val initializeLibraryUseCase: InitializeLibraryUseCase = mockk(relaxed = true)
     private val encryptSymmetricUseCase: EncryptSymmetricUseCase = mockk()
     private val decryptSymmetricUseCase: DecryptSymmetricUseCase = mockk()
@@ -32,21 +33,17 @@ class EncryptionkitManagerTest {
 
     @Before
     fun setUp() {
-        // We use the internal constructor to inject a mocked component (Testing Backdoor)
-        manager = EncryptionkitManager(
-            componentFactory = {
-                object : EncryptionkitComponent(it) {
-                    override val initializeLibraryUseCase = this@EncryptionkitManagerTest.initializeLibraryUseCase
-                    override val encryptSymmetricUseCase = this@EncryptionkitManagerTest.encryptSymmetricUseCase
-                    override val decryptSymmetricUseCase = this@EncryptionkitManagerTest.decryptSymmetricUseCase
-                    override val encryptAsymmetricUseCase = this@EncryptionkitManagerTest.encryptAsymmetricUseCase
-                    override val getSecurityLevelUseCase = this@EncryptionkitManagerTest.getSecurityLevelUseCase
-                    override val deleteKeyUseCase = this@EncryptionkitManagerTest.deleteKeyUseCase
-                    override val hashDataUseCase = this@EncryptionkitManagerTest.hashDataUseCase
-                    override val logger = mockk<es.joshluq.foundationkit.log.Loggerkit>(relaxed = true)
-                }
-            }
-        )
+        coEvery { component.initializeLibraryUseCase } returns initializeLibraryUseCase
+        coEvery { component.logger } returns mockk(relaxed = true)
+        coEvery { component.encryptSymmetricUseCase } returns encryptSymmetricUseCase
+        coEvery { component.decryptSymmetricUseCase } returns decryptSymmetricUseCase
+        coEvery { component.encryptAsymmetricUseCase } returns encryptAsymmetricUseCase
+        coEvery { component.getSecurityLevelUseCase } returns getSecurityLevelUseCase
+        coEvery { component.deleteKeyUseCase } returns deleteKeyUseCase
+        coEvery { component.hashDataUseCase } returns hashDataUseCase
+
+        manager = EncryptionkitManager{ component }
+
         manager.initialize(config)
     }
 
@@ -82,7 +79,7 @@ class EncryptionkitManagerTest {
     fun `encryptWithPublicKey should return success result when successful`() = runBlocking {
         val data = "data".toByteArray()
         val expectedCiphertext = "cipher_asym".toByteArray()
-        
+
         // Ensure config has public key hash
         val configWithHash = config.copy(publicKeyHash = "some_hash")
         manager.initialize(configWithHash)

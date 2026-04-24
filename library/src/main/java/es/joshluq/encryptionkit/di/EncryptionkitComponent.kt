@@ -17,9 +17,9 @@ import es.joshluq.foundationkit.log.Loggerkit
  * Internal Dependency Injection component
  * Following the Internal Dependency Graph pattern.
  */
-internal open class EncryptionkitComponent(val config: EncryptionkitConfig) {
+internal class EncryptionkitComponent(val config: EncryptionkitConfig) {
 
-    open val logger: Loggerkit by lazy { config.logger }
+    val logger: Loggerkit by lazy { config.logger }
 
     private val keystoreDataSource: KeystoreDataSource by lazy {
         KeystoreDataSource()
@@ -34,31 +34,31 @@ internal open class EncryptionkitComponent(val config: EncryptionkitConfig) {
         EncryptionRepositoryImpl(keystoreDataSource, fileDataSource, logger)
     }
 
-    open val initializeLibraryUseCase: InitializeLibraryUseCase by lazy {
+    val initializeLibraryUseCase: InitializeLibraryUseCase by lazy {
         InitializeLibraryUseCase(repository)
     }
 
-    open val encryptSymmetricUseCase: EncryptSymmetricUseCase by lazy {
+    val encryptSymmetricUseCase: EncryptSymmetricUseCase by lazy {
         EncryptSymmetricUseCase(repository)
     }
 
-    open val decryptSymmetricUseCase: DecryptSymmetricUseCase by lazy {
+    val decryptSymmetricUseCase: DecryptSymmetricUseCase by lazy {
         DecryptSymmetricUseCase(repository)
     }
 
-    open val encryptAsymmetricUseCase: EncryptAsymmetricUseCase by lazy {
+    val encryptAsymmetricUseCase: EncryptAsymmetricUseCase by lazy {
         EncryptAsymmetricUseCase(repository)
     }
 
-    open val getSecurityLevelUseCase: GetSecurityLevelUseCase by lazy {
+    val getSecurityLevelUseCase: GetSecurityLevelUseCase by lazy {
         GetSecurityLevelUseCase(repository)
     }
 
-    open val deleteKeyUseCase: DeleteKeyUseCase by lazy {
+    val deleteKeyUseCase: DeleteKeyUseCase by lazy {
         DeleteKeyUseCase(repository)
     }
 
-    open val hashDataUseCase: HashDataUseCase by lazy {
+    val hashDataUseCase: HashDataUseCase by lazy {
         HashDataUseCase(repository)
     }
 }
