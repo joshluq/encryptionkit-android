@@ -10,13 +10,11 @@ internal class InitializeLibraryUseCase(
 ) : UseCase<InitializeLibraryUseCase.Input, NoneOutput> {
 
     override suspend fun invoke(input: Input): Result<NoneOutput> = runCatching {
-        repository.initializeKey(input.alias, input.requireUserAuth, input.useStrongBox)
+        repository.initializeKey(input.alias)
         NoneOutput
     }
 
     data class Input(
-        val alias: String,
-        val requireUserAuth: Boolean,
-        val useStrongBox: Boolean
+        val alias: String
     ) : UseCaseInput
 }

@@ -16,17 +16,18 @@ class SymmetricUseCaseTest {
     private val repository: EncryptionRepository = mockk()
     private val encryptUseCase = EncryptSymmetricUseCase(repository)
     private val decryptUseCase = DecryptSymmetricUseCase(repository)
+    
     private val data = "hello".toByteArray()
+    private val associatedData = "ad".toByteArray()
     private val ciphertext = "encrypted".toByteArray()
-    private val iv = "iv123".toByteArray()
-    private val cryptoResult = CryptoResult(ciphertext, iv)
+    private val cryptoResult = CryptoResult(ciphertext)
 
     @Test
     fun `EncryptSymmetricUseCase should delegate to repository`() = runBlocking {
         // Given
         val alias = "test_alias"
-        every { repository.encryptSymmetric(data, alias) } returns cryptoResult
-        val input = EncryptSymmetricUseCase.Input(data, alias)
+        every { repository.encryptSymmetric(data, alias, associatedData) } returns cryptoResult
+        val input = EncryptSymmetricUseCase.Input(data, alias, associatedData)
 
         // When
         val result = encryptUseCase(input)
@@ -34,15 +35,15 @@ class SymmetricUseCaseTest {
         // Then
         assertTrue(result.isSuccess)
         assertEquals(cryptoResult, result.getOrNull()?.result)
-        verify { repository.encryptSymmetric(data, alias) }
+        verify { repository.encryptSymmetric(data, alias, associatedData) }
     }
 
     @Test
     fun `DecryptSymmetricUseCase should delegate to repository`() = runBlocking {
         // Given
         val alias = "test_alias"
-        every { repository.decryptSymmetric(ciphertext, iv, alias) } returns data
-        val input = DecryptSymmetricUseCase.Input(ciphertext, iv, alias)
+        every { repository.decryptSymmetric(ciphertext, alias, associatedData) } returns data
+        val input = DecryptSymmetricUseCase.Input(ciphertext, alias, associatedData)
 
         // When
         val result = decryptUseCase(input)
@@ -50,6 +51,6 @@ class SymmetricUseCaseTest {
         // Then
         assertTrue(result.isSuccess)
         assertArrayEquals(data, result.getOrNull()?.data)
-        verify { repository.decryptSymmetric(ciphertext, iv, alias) }
+        verify { repository.decryptSymmetric(ciphertext, alias, associatedData) }
     }
 }

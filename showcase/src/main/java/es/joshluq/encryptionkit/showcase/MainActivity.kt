@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
 fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     var textToEncrypt by remember { mutableStateOf("Military-grade data") }
+    var secureKeyInput by remember { mutableStateOf("session_token") }
     var ciphertextInput by remember { mutableStateOf("") }
     var ivInput by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
@@ -90,7 +91,7 @@ fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
         OutlinedTextField(
             value = ivInput,
             onValueChange = { ivInput = it },
-            label = { Text("IV (Hex)") },
+            label = { Text("IV (Hex, Managed by Tink / Optional)") },
             modifier = Modifier.fillMaxWidth(),
             textStyle = MaterialTheme.typography.bodySmall
         )
@@ -107,11 +108,44 @@ fun ShowcaseScreen(viewModel: ShowcaseViewModel) {
                 Text("Encrypt")
             }
             Button(
-                onClick = { viewModel.decrypt(ciphertextInput, ivInput) }, 
+                onClick = { viewModel.decrypt(ciphertextInput) },
                 modifier = Modifier.weight(1f),
-                enabled = ciphertextInput.isNotEmpty() && ivInput.isNotEmpty()
+                enabled = ciphertextInput.isNotEmpty()
             ) {
                 Text("Decrypt")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Section: Secure Storage
+        Text(text = "Secure Storage (DataStore + Tink)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(text = "Persist data securely using SecureDataStoreProvider.", style = MaterialTheme.typography.bodySmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        OutlinedTextField(
+            value = secureKeyInput,
+            onValueChange = { secureKeyInput = it },
+            label = { Text("Storage Key") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { viewModel.saveSecurely(secureKeyInput, textToEncrypt) }, 
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Save Securely")
+            }
+            Button(
+                onClick = { viewModel.readSecurely(secureKeyInput) },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Read Securely")
             }
         }
 

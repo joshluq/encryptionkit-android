@@ -5,9 +5,9 @@ import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import java.security.PublicKey
 
 internal interface EncryptionRepository {
-    fun initializeKey(alias: String, requireUserAuth: Boolean, useStrongBox: Boolean)
-    fun encryptSymmetric(data: ByteArray, alias: String): CryptoResult
-    fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, alias: String): ByteArray
+    fun initializeKey(alias: String)
+    fun encryptSymmetric(data: ByteArray, alias: String, associatedData: ByteArray = ByteArray(0)): CryptoResult
+    fun decryptSymmetric(ciphertext: ByteArray, alias: String, associatedData: ByteArray = ByteArray(0)): ByteArray
     fun getSecurityLevel(alias: String): SecurityLevel
     fun deleteKey(alias: String)
     suspend fun getPublicKey(): PublicKey

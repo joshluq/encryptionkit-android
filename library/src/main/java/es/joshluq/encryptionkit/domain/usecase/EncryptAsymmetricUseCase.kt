@@ -54,9 +54,7 @@ internal class EncryptAsymmetricUseCase(
 
             other as Output
 
-            if (!data.contentEquals(other.data)) return false
-
-            return true
+            return data.contentEquals(other.data)
         }
 
         override fun hashCode(): Int {

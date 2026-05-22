@@ -1,29 +1,31 @@
 # Encryptionkit for Android 🛡️
 
-**"Military-grade privacy for your app's data."**
+**"High-assurance cryptography for modern Android applications."**
 
-Encryptionkit is a high-performance, security-focused library for Android designed to provide a robust abstraction layer over the **Android Keystore System** and **Java Cryptography Architecture (JCA)**. It enforces modern cryptographic standards and hardware-backed security to protect sensitive information at rest and in transit.
+Encryptionkit is a robust abstraction layer built on top of **Google Tink** and the **Android Keystore System**. It simplifies complex cryptographic operations by providing a secure-by-default API, enforcing modern standards like **AEAD**, and offering seamless integration with **Jetpack DataStore** for encrypted persistence.
 
 ## 🚀 Key Features
 
-- **Hardware-Backed Security**: Seamless integration with **TEE (Trusted Execution Environment)** and **StrongBox** to ensure keys never leave the secure hardware.
-- **Authenticated Encryption**: Uses **AES-GCM (256-bit)** by default to ensure both data confidentiality and integrity (AEAD).
-- **Zero-Trust Memory**: Optimized handling of sensitive data using **`SecureBytes`** to explicitly wipe data from memory after use.
-- **Asymmetric Encryption**: Support for **RSA-OAEP (SHA-256)** with optional **Public Key Pinning** to prevent Man-in-the-Middle attacks.
-- **Integrity & Hashing**: Secure one-way hashing (**SHA-256**, **MD5**) for data integrity verification and fingerprinting.
-- **Clean Architecture & Zero-DI**: Decoupled design following Clean Architecture with an **Internal Dependency Graph** pattern, ensuring a zero-dependency footprint (no Dagger, Hilt, or Koin needed).
+- **Google Tink Core**: Leverages Google's battle-tested cryptographic library to eliminate common implementation errors (IV misuse, padding oracles).
+- **Hardware-Backed Security**: Direct integration with **TEE (Trusted Execution Environment)** and **StrongBox** for hardware-protected keys.
+- **Secure Storage**: Built-in **`SecureDataStoreProvider`** implementing the `StorageProvider` interface from FoundationKit for encrypted persistence.
+- **Authenticated Encryption (AEAD)**: Uses **AES-GCM (256-bit)** to ensure confidentiality and data integrity.
+- **Metadata Binding (AD)**: Support for **Associated Data** to cryptographically bind ciphertexts to their context (e.g., preference keys).
+- **Zero-Trust Memory**: Native support for **`SecureBytes`** to ensure sensitive data is wiped from RAM immediately after use.
+- **Asymmetric Encryption**: Modern **RSA-OAEP (SHA-256)** implementation with public key pinning support.
+- **Internal Dependency Graph**: Zero-dependency footprint (no Dagger/Hilt/Koin) for a lightweight SDK.
 
 ## 🏗 Architecture
 
-Encryptionkit follows a strict **Clean Architecture** to ensure that cryptographic logic is isolated, testable, and secure. It implements an internal dependency graph for pure Kotlin dependency injection.
+Encryptionkit follows **Clean Architecture** principles. The encryption logic is encapsulated in a dedicated `TinkDataSource` with an internal cache for high performance.
 
 ```mermaid
 graph TD
     subgraph "SDK Layer (Public API)"
-        Config[EncryptionConfig]
+        Config[EncryptionkitConfig]
         Builder[EncryptionkitManager.Builder]
         Facade[EncryptionkitManager Facade]
-        Component[EncryptionComponent - Internal DI]
+        SecStore[SecureDataStoreProvider]
     end
 
     subgraph "Domain Layer (Pure Kotlin)"
@@ -34,115 +36,90 @@ graph TD
 
     subgraph "Data Layer (Implementation)"
         RepoImpl[EncryptionRepositoryImpl]
-        KS_DS[KeystoreDataSource]
-        File_DS[FileDataSource]
+        TinkDS[TinkDataSource - Cached Aead]
     end
 
-    subgraph "Android System"
+    subgraph "Cryptography Engine"
+        Tink[Google Tink Engine]
         KS[Android Keystore System]
-        TEE["TEE / StrongBox"]
     end
 
-    Builder -- configures --> Config
     Builder -- constructs --> Facade
-    Facade -- initializes --> Component
-    Component -- instantiates lazy --> UC
+    Facade -- provides --> SecStore
+    Facade -- uses --> UC
     UC -- uses --> RepoInterface
     RepoImpl -- implements --> RepoInterface
-    RepoImpl --> KS_DS
-    RepoImpl --> File_DS
-    KS_DS --> KS
-    KS --> TEE
+    RepoImpl --> TinkDS
+    TinkDS --> Tink
+    Tink --> KS
 ```
 
 ## 🛠 Usage Example
 
 ### 1. Initialize
-Initialize the library using the Builder DSL.
+Initialize the SDK using the DSL. The `context` is required to initialize the Tink Keyset storage.
 
 ```kotlin
-val config = EncryptionConfig.build {
+val config = EncryptionkitConfig.build(context) {
     alias = "my_app_secure_key"
-    useStrongBox = true // Prefer Secure Element
-    requireUserAuth = false
+    publicKeyHash = "a1b2c3d4..." // Optional for pinning
 }
 
 val encryptionManager = EncryptionkitManager.Builder().build(config)
 ```
 
-### 2. Encrypt Sensitive Data (Securely)
-Use `SecureBytes` to ensure sensitive data is wiped from memory. Operations are asynchronous (suspend functions).
+### 2. Encrypt & Decrypt (Symmetric)
+Tink manages the IV and integrity tags automatically. You can optionally provide `associatedData` to bind the encryption to a specific context.
 
 ```kotlin
-val sensitiveData = "Top Secret".toByteArray()
-val secureBytes = SecureBytes(sensitiveData)
+val secureBytes = SecureBytes("Sensitive Data".toByteArray())
 
-val result = encryptionManager.encrypt(secureBytes)
+// Encrypt
+val result = encryptionManager.encrypt(secureBytes, associatedData = "user_id_123".toByteArray())
 result.onSuccess { cryptoResult ->
-    // cryptoResult contains ciphertext and IV
-}.onFailure { error ->
-    // Handle error (e.g., CryptoException)
+    val encryptedData = cryptoResult.ciphertext
 }
 
-// IMPORTANT: Wipe memory after use
-secureBytes.close()
+// Decrypt
+val decrypted = encryptionManager.decrypt(encryptedData, associatedData = "user_id_123".toByteArray())
 ```
 
-### 3. Decrypt
-Retrieve the original information using the stored ciphertext and IV.
+### 3. Secure Storage (Jetpack DataStore)
+Easily create an encrypted storage provider that integrates with FoundationKit's `StorageProvider`.
 
 ```kotlin
-val result = encryptionManager.decrypt(ciphertext, iv)
-result.onSuccess { decryptedBytes ->
-    val originalString = String(decryptedBytes)
-}
+val secureStorage = encryptionManager.createSecureStorage(
+    dataStore = context.dataStore,
+    serializerProvider = MyGsonSerializer()
+)
+
+// The data is automatically encrypted with Tink and bound to its key
+secureStorage.save("api_token", "eyJhbGciOiJI...")
+
+// Read it back safely
+val token: String? = secureStorage.read("api_token")
 ```
 
-### 4. Asymmetric Encryption (RSA) with Pinning
-Encrypt data for a backend server using its public key.
+### 4. Hashing
+Secure one-way fingerprinting.
 
 ```kotlin
-val config = EncryptionConfig.build {
-    certificatePathProvider = MyCertProvider()
-    setPublicKeyPinning("a1b2c3d4...") // Fingerprint validation
-}
-val manager = EncryptionkitManager.Builder().build(config)
-
-val result = manager.encryptWithPublicKey(payload)
-```
-
-### 5. Hashing
-Generate a secure fingerprint of data (SHA-256 by default).
-
-```kotlin
-val hashResult = encryptionManager.hashToHex("Important Data")
-// e.g., "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
-```
-
-### 6. Security Management
-Verify the hardware security level or delete the key.
-
-```kotlin
-// Check Security Level (STRONGBOX, TRUSTED_ENVIRONMENT, or SOFTWARE)
-val level = encryptionManager.getSecurityLevel()
-
-// Delete Key
-encryptionManager.deleteKey()
+val hashHex = encryptionManager.hashToHex("Fingerprint me")
 ```
 
 ## 📂 Project Structure
 
 - `:library` (`es.joshluq.encryptionkit`)
-    - `sdk`: Public API Facade, Configuration, and Internal DI.
-    - `domain`: Pure Kotlin business logic (`model`, `usecase`, `repository`, `provider`).
-    - `data`: Android-specific implementations (`datasource`, `repository impl`).
-- `:showcase`: A sample app demonstrating all features, including TEE verification and secure memory usage.
+    - `sdk`: Public API, Configuration, and Internal DI.
+    - `data`: Tink implementation, `TinkDataSource` (cached), and `SecureDataStoreProvider`.
+    - `domain`: Pure business logic, UseCases, and Repository interfaces.
+- `:showcase`: A sample app demonstrating Secure Storage, hardware security verification, and AEAD encryption.
 
 ## 🧪 Quality Assurance
 
-- **Compliance**: Strictly follows **NIST** and **Android Security** best practices.
-- **Internal DI Graph**: Zero-dependency footprint using pure Kotlin lazy instantiation.
-- **Testing**: Comprehensive suite of unit tests for all layers, including Keystore hardware simulation.
+- **Tink Standard**: Inherits the security guarantees of Google's Tink library.
+- **Performance**: Internal caching of `Aead` primitives to minimize Keystore access latency.
+- **Memory Safety**: Explicit wiping of sensitive data via the `SecureBytes` lifecycle.
 
 ---
 

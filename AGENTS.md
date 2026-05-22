@@ -7,110 +7,73 @@ You are an expert AI agent specialized in high-assurance, enterprise-grade Andro
 
 ## 1. Core Architectural Pillars
 
-### Clean Architecture
-We enforce a strict separation of concerns into three layers:
-- **Presentation/Public API (Manager/Config):** The only entry point for users.
-- **Domain (UseCases, Models, Repository Interfaces):** Pure business/security logic.
-- **Data (Repository Impls, DataSources):** Infrastructure and implementation details.
+### Clean Architecture & Google Tink
+We enforce a strict separation of concerns. All cryptographic implementations must leverage **Google Tink** to ensure misuse-resistance.
+- **Presentation (Manager/Config):** The only entry point. Uses `associatedData` binding by default.
+- **Domain (UseCases, Models, Interfaces):** Pure security logic. Suspended and testable.
+- **Data (Repository Impls, TinkDataSource):** Infrastructure. `TinkDataSource` handles the caching of primitives.
 
-### SOLID Principles
-- **S (Single Responsibility):** Each class (especially UseCases) must do only one thing.
-- **O (Open/Closed):** Kits should be open for extension via configuration but closed for modification.
-- **L (Liskov Substitution):** Use interfaces for providers and repositories.
-- **I (Interface Segregation):** Small, focused interfaces (e.g., `CertificatePathProvider`).
-- **D (Dependency Inversion):** Internal logic depends on abstractions, not implementations.
+### SOLID & Security Principles
+- **S (Single Responsibility):** UseCases encapsulate one cryptographic operation.
+- **O (Open/Closed):** Extensible via `ManagerConfig` but closed for modification.
+- **L (Liskov Substitution):** Expose `StorageProvider` for persistence.
+- **I (Interface Segregation):** Keep interfaces focused (e.g., `EncryptionRepository`).
+- **D (Dependency Inversion):** Use the internal `Component` for DI.
 
 ---
 
 ## 2. Design Patterns
 
-### Repository Pattern
-Decouples the domain layer from data sources.
-- **Example:**
+### Repository Pattern with Tink
+Decouples domain logic from Tink's `KeysetHandle` management.
+- **Rule:** The Repository must be **stateless**. Use `TinkDataSource` for caching.
 ```kotlin
-interface EncryptionRepository {
-    fun encryptSymmetric(data: ByteArray, alias: String): CryptoResult
-}
-
 internal class EncryptionRepositoryImpl(
-    private val keystoreDataSource: KeystoreDataSource,
-    private val fileDataSource: FileDataSource
+    private val tinkDataSource: TinkDataSource,
+    private val logger: LoggerKit
 ) : EncryptionRepository {
-    override fun encryptSymmetric(...) { /* implementation */ }
+    override fun encryptSymmetric(data: ByteArray, alias: String, ad: ByteArray): CryptoResult {
+        val aead = tinkDataSource.getAead(alias)
+        return CryptoResult(aead.encrypt(data, ad))
+    }
 }
 ```
 
-### Use Case Pattern
-Every operation must be encapsulated in a single `UseCase` class.
-- **Rule:** Inherit from `UseCase<Input, Output>`.
-- **Example:**
+### Tink Data Source (Caching)
+Always use `TinkDataSource` to manage `AndroidKeysetManager`. This ensures high performance by caching `Aead` primitives.
 ```kotlin
-internal class EncryptSymmetricUseCase(
-    private val repository: EncryptionRepository
-) : UseCase<EncryptSymmetricUseCase.Input, EncryptSymmetricUseCase.Output> {
-    override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val result = repository.encryptSymmetric(input.data, input.alias)
-        Output(result)
-    }
-    data class Input(val data: ByteArray, val alias: String) : UseCaseInput
-    data class Output(val result: CryptoResult) : UseCaseOutput
+internal class TinkDataSource(private val context: Context) {
+    private val aeadCache = ConcurrentHashMap<String, Aead>()
+    fun getAead(alias: String): Aead = aeadCache.getOrPut(alias) { /* init Tink */ }
 }
 ```
 
 ---
 
 ## 3. Internal Dependency Graph (Zero-DI Frameworks)
-We **strictly prohibit** external DI frameworks (Dagger, Hilt, Koin). Use this pure Kotlin pattern:
+We **strictly prohibit** external DI frameworks (Dagger, Hilt, Koin). Use the Internal DI pattern:
 
-### Rules:
-1. **Config (Public):** Holds data and interfaces.
-2. **Component (Internal):** The DI container. Use `by lazy { ... }` for all instantiations.
-3. **Manager (Public):** Uses a factory for the component to allow testing backdoors.
-
-### Template:
-```kotlin
-// 1. Public Config
-class EncryptionkitConfig(...) : ManagerConfig
-
-// 2. Internal DI Container
-internal open class EncryptionkitComponent(val config: EncryptionkitConfig) {
-    private val repository: EncryptionRepository by lazy { 
-        EncryptionRepositoryImpl(KeystoreDataSource(), FileDataSource()) 
-    }
-    open val encryptUseCase: EncryptSymmetricUseCase by lazy { 
-        EncryptSymmetricUseCase(repository) 
-    }
-}
-
-// 3. Public Facade
-class EncryptionkitManager internal constructor(
-    private val componentFactory: (EncryptionkitConfig) -> EncryptionkitComponent = { EncryptionkitComponent(it) }
-) : Manager<EncryptionkitConfig>() {
-    private lateinit var component: EncryptionkitComponent
-
-    fun initialize(config: EncryptionkitConfig) {
-        this.config = config
-        this.component = componentFactory(config)
-    }
-
-    suspend fun encrypt(data: ByteArray) = component.encryptUseCase(Input(data, config.alias))
-}
-```
+1. **Config (Public):** Mandatory `Context` (stored as `applicationContext`).
+2. **Component (Internal):** The DI container using `by lazy`.
+3. **Manager (Public):** Facade that initializes the component.
 
 ---
 
-## 4. Cybersecurity Context & Constraints
-- **Authenticated Encryption:** Default to **AES-GCM (256-bit)**.
-- **Hardware-Backed:** Prefer `StrongBox` or `TEE`.
-- **Zero-Trust Memory:** Use `SecureBytes` and wipe sensitive data immediately.
-- **No External IVs:** Encryption must always generate its own IV via `SecureRandom`.
+## 4. Cybersecurity Constraints (Critical)
+- **Authenticated Encryption (AEAD):** Always use **AES-GCM (256-bit)** via Tink.
+- **Associated Data (AD):** When using `SecureDataStoreProvider`, always bind the ciphertext to its key using `associatedData`.
+- **Zero-Trust Memory:** Use `SecureBytes` for all sensitive payloads and call `close()` immediately after use.
+- **Context Handling:** Always use `context.applicationContext` in the Manager to prevent memory leaks.
+- **No Manual IVs:** Never allow the user to provide an IV; let Tink handle it.
 
 ---
 
 ## 5. Task Execution Instructions
 When asked to add features:
-1. Identify the required **Repository** method.
-2. Create a specific **UseCase**.
-3. Register the UseCase in the module's **Component** (lazy).
-4. Expose the functionality in the **Manager**.
-5. Ensure **Unit Tests** can inject a mocked Component via the internal constructor.
+1. Identify if a new **DataSource** method or primitive is needed.
+2. Update the **UseCase** to handle the new operation (must be suspended).
+3. Register the dependency in `EncryptionkitComponent` (lazy).
+4. Expose the functionality in `EncryptionkitManager`.
+5. Ensure **Unit Tests** mock the `TinkDataSource` to avoid Keystore dependencies in JUnit.
+
+```utiliza la clase es.joshluq.foundationkit.log.LoggerKit para trazas eficientes con lambdas.```
