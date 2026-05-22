@@ -5,6 +5,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.lifecycle.viewModelScope
 import es.joshluq.encryptionkit.domain.model.*
 import es.joshluq.encryptionkit.sdk.EncryptionkitManager
+import es.joshluq.foundationkit.provider.StorageProvider
+import es.joshluq.foundationkit.provider.read
+import es.joshluq.foundationkit.provider.save
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ShowcaseViewModel @Inject constructor(
-    private val encryptionKitManager: EncryptionkitManager
+    private val encryptionKitManager: EncryptionkitManager,
+    private val secureStorage: StorageProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ShowcaseUiState>(ShowcaseUiState.Idle)
@@ -30,7 +34,6 @@ class ShowcaseViewModel @Inject constructor(
                     _uiState.value = ShowcaseUiState.Success(
                         message = "Encrypted (via SecureBytes): ${result.toHexString()}",
                         ciphertext = result.toHexString(),
-                        iv = result.iv.joinToString("") { "%02x".format(it) }
                     )
                 }
                 .onFailure { e ->
@@ -40,15 +43,13 @@ class ShowcaseViewModel @Inject constructor(
         }
     }
 
-    fun decrypt(ciphertextHex: String, ivHex: String) {
+    fun decrypt(ciphertextHex: String) {
         viewModelScope.launch {
             try {
                 val ciphertext = ciphertextHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-                val iv = ivHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-
-                encryptionKitManager.decrypt(ciphertext, iv)
+                encryptionKitManager.decrypt(ciphertext)
                     .onSuccess { decryptedBytes ->
-                        _uiState.value = ShowcaseUiState.Success("Decrypted: ${String(decryptedBytes)}")
+                        _uiState.value = ShowcaseUiState.Success("Decrypted: ${String(decryptedBytes.data)}")
                     }
                     .onFailure { e ->
                         _uiState.value = ShowcaseUiState.Error("Decryption failed: ${e.message}")
@@ -105,6 +106,32 @@ class ShowcaseViewModel @Inject constructor(
                 .onFailure { e ->
                     _uiState.value = ShowcaseUiState.Error("Failed to get security level: ${e.message}")
                 }
+        }
+    }
+
+    fun saveSecurely(key: String, value: String) {
+        viewModelScope.launch {
+            try {
+                secureStorage.save(key, value)
+                _uiState.value = ShowcaseUiState.Success("Successfully saved '$key' securely!")
+            } catch (e: Exception) {
+                _uiState.value = ShowcaseUiState.Error("Failed to save securely: ${e.message}")
+            }
+        }
+    }
+
+    fun readSecurely(key: String) {
+        viewModelScope.launch {
+            try {
+                val value: String? = secureStorage.read(key)
+                if (value != null) {
+                    _uiState.value = ShowcaseUiState.Success("Securely read '$key': $value")
+                } else {
+                    _uiState.value = ShowcaseUiState.Error("Key '$key' not found in secure storage")
+                }
+            } catch (e: Exception) {
+                _uiState.value = ShowcaseUiState.Error("Failed to read securely: ${e.message}")
+            }
         }
     }
 }

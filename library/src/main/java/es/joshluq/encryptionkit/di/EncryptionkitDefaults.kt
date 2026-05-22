@@ -2,7 +2,7 @@ package es.joshluq.encryptionkit.di
 
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.foundationkit.log.LoggerDefaults
-import es.joshluq.foundationkit.log.Loggerkit
+import es.joshluq.foundationkit.log.LoggerKit
 
 /**
  * Default implementations and constants for Encryptionkit.
@@ -16,10 +16,10 @@ internal object EncryptionkitDefaults {
     private const val TAG = "Encryptionkit"
 
     /**
-     * Default [Loggerkit] instance for the SDK.
+     * Default [LoggerKit] instance for the SDK.
      */
-    val logger: Loggerkit by lazy {
-        Loggerkit.Builder()
+    val logger: LoggerKit by lazy {
+        LoggerKit.Builder()
             .setProvider(LoggerDefaults.defaultLogProvider(tagPrefix = TAG))
             .build()
     }

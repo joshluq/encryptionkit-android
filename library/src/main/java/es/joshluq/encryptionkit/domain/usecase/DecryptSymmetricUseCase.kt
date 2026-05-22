@@ -10,14 +10,14 @@ internal class DecryptSymmetricUseCase(
 ) : UseCase<DecryptSymmetricUseCase.Input, DecryptSymmetricUseCase.Output> {
 
     override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val result = repository.decryptSymmetric(input.ciphertext, input.iv, input.alias)
+        val result = repository.decryptSymmetric(input.ciphertext, input.alias, input.associatedData)
         Output(result)
     }
 
     data class Input(
         val ciphertext: ByteArray,
-        val iv: ByteArray,
-        val alias: String
+        val alias: String,
+        val associatedData: ByteArray = ByteArray(0)
     ) : UseCaseInput {
 
         override fun equals(other: Any?): Boolean {
@@ -27,16 +27,16 @@ internal class DecryptSymmetricUseCase(
             other as Input
 
             if (!ciphertext.contentEquals(other.ciphertext)) return false
-            if (!iv.contentEquals(other.iv)) return false
             if (alias != other.alias) return false
+            if (!associatedData.contentEquals(other.associatedData)) return false
 
             return true
         }
 
         override fun hashCode(): Int {
             var result = ciphertext.contentHashCode()
-            result = 31 * result + iv.contentHashCode()
             result = 31 * result + alias.hashCode()
+            result = 31 * result + associatedData.contentHashCode()
             return result
         }
     }
@@ -46,12 +46,8 @@ internal class DecryptSymmetricUseCase(
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-
             other as Output
-
-            if (!data.contentEquals(other.data)) return false
-
-            return true
+            return data.contentEquals(other.data)
         }
 
         override fun hashCode(): Int {

@@ -1,6 +1,9 @@
 package es.joshluq.encryptionkit.showcase.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -9,12 +12,47 @@ import dagger.hilt.components.SingletonComponent
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.encryptionkit.sdk.EncryptionkitManager
+import es.joshluq.foundationkit.provider.SerializerProvider
+import es.joshluq.foundationkit.provider.StorageProvider
 import java.io.File
 import javax.inject.Singleton
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "showcase_prefs")
 
 @Module
 @InstallIn(SingletonComponent::class)
 object ShowcaseModule {
+
+    @Provides
+    @Singleton
+    fun provideSerializerProvider(): SerializerProvider {
+        return object : SerializerProvider {
+            override fun <T : Any> serialize(value: T, type: Class<T>): String {
+                return value.toString()
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : Any> deserialize(value: String, type: Class<T>): T {
+                return when (type) {
+                    String::class.java -> value as T
+                    else -> throw IllegalArgumentException("Unsupported type in showcase serializer")
+                }
+            }
+        }
+    }
+
+    @Provides
+    @Singleton
+    fun provideSecureStorage(
+        @ApplicationContext context: Context,
+        encryptionkitManager: EncryptionkitManager,
+        serializerProvider: SerializerProvider
+    ): StorageProvider {
+        return encryptionkitManager.createSecureStorage(
+            dataStore = context.dataStore,
+            serializerProvider = serializerProvider
+        )
+    }
 
     @Provides
     @Singleton
@@ -34,16 +72,14 @@ object ShowcaseModule {
     @Provides
     @Singleton
     fun provideEncryptionKitManager(
+        @ApplicationContext context: Context,
         certificatePathProvider: CertificatePathProvider
     ): EncryptionkitManager {
-        val config = EncryptionkitConfig.build {
+        val config = EncryptionkitConfig.build(context) {
             alias = "showcase_secure_key"
-            useStrongBox = true
-            requireUserAuth = false
             this.certificatePathProvider = certificatePathProvider
         }
 
-        return EncryptionkitManager.Builder()
-            .build(config)
+        return EncryptionkitManager.Builder().build(config)
     }
 }

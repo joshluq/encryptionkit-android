@@ -1,86 +1,71 @@
 package es.joshluq.encryptionkit.data.repository
 
-import android.security.keystore.KeyPermanentlyInvalidatedException
-import android.security.keystore.UserNotAuthenticatedException
-import es.joshluq.encryptionkit.data.datasource.FileDataSource
-import es.joshluq.encryptionkit.data.datasource.KeystoreDataSource
+import android.content.Context
+import android.security.keystore.KeyInfo
+import android.security.keystore.KeyProperties
+import es.joshluq.encryptionkit.data.datasource.TinkDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
+import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
-import es.joshluq.foundationkit.log.Loggerkit
+import es.joshluq.foundationkit.log.LoggerKit
+import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 import java.security.GeneralSecurityException
+import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.security.PublicKey
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
 import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.OAEPParameterSpec
 import javax.crypto.spec.PSource
+import android.os.Build
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.core.content.edit
 
 internal class EncryptionRepositoryImpl(
-    private val keystoreDataSource: KeystoreDataSource,
-    private val fileDataSource: FileDataSource,
-    private val logger: Loggerkit
+    private val tinkDataSource: TinkDataSource,
+    private val certificatePathProvider: CertificatePathProvider,
+    private val logger: LoggerKit,
+    private val context: Context
 ) : EncryptionRepository {
 
     companion object {
-        private const val LENGTH = 128
         private const val TAG = "EncryptionRepository"
     }
 
-    private val aesTransformation = "AES/GCM/NoPadding"
     private val rsaTransformation = "RSA/ECB/OAEPPadding"
 
-    override fun initializeKey(alias: String, requireUserAuth: Boolean, useStrongBox: Boolean) {
-        logger.d(TAG, "Initializing key: $alias (auth=$requireUserAuth, strongBox=$useStrongBox)")
-        try {
-            keystoreDataSource.ensureKeyExists(alias, requireUserAuth, useStrongBox)
-        } catch (e: GeneralSecurityException) {
-            logger.e(TAG, "Failed to initialize key: $alias", e)
-            throw mapException(e)
-        } catch (e: IOException) {
-            logger.e(TAG, "IO Error initializing key: $alias", e)
-            throw mapException(e)
-        }
+    override fun initializeKey(alias: String) {
+        logger.d(TAG, "Initializing key: $alias via Tink")
+        tinkDataSource.getAead(alias)
     }
 
-    override fun encryptSymmetric(data: ByteArray, alias: String): CryptoResult {
-        logger.d(TAG, "Encrypting symmetric data with alias: $alias")
+    override fun encryptSymmetric(data: ByteArray, alias: String, associatedData: ByteArray): CryptoResult {
+        logger.d(TAG, "Encrypting symmetric data with alias: $alias using Tink")
         try {
-            val key = keystoreDataSource.getKey(alias)
-                ?: throw CryptoException(
-                    "Key not found",
-                    reason = CryptoException.Reason.KEY_NOT_FOUND
-                )
-
-            val cipher = Cipher.getInstance(aesTransformation)
-            cipher.init(Cipher.ENCRYPT_MODE, key)
-
-            val ciphertext = cipher.doFinal(data)
-            return CryptoResult(ciphertext, cipher.iv)
+            val aead = tinkDataSource.getAead(alias)
+            val ciphertext = aead.encrypt(data, associatedData)
+            return CryptoResult(ciphertext)
         } catch (e: GeneralSecurityException) {
             logger.e(TAG, "Symmetric encryption failed for alias: $alias", e)
             throw mapException(e)
         }
     }
 
-    override fun decryptSymmetric(ciphertext: ByteArray, iv: ByteArray, alias: String): ByteArray {
-        logger.d(TAG, "Decrypting symmetric data with alias: $alias")
+    override fun decryptSymmetric(ciphertext: ByteArray, alias: String, associatedData: ByteArray): ByteArray {
+        logger.d(TAG, "Decrypting symmetric data with alias: $alias using Tink")
         try {
-            val key = keystoreDataSource.getKey(alias)
-                ?: throw CryptoException(
-                    "Key not found",
-                    reason = CryptoException.Reason.KEY_NOT_FOUND
-                )
-
-            val cipher = Cipher.getInstance(aesTransformation)
-            val spec = GCMParameterSpec(LENGTH, iv)
-            cipher.init(Cipher.DECRYPT_MODE, key, spec)
-
-            return cipher.doFinal(ciphertext)
+            val aead = tinkDataSource.getAead(alias)
+            return aead.decrypt(ciphertext, associatedData)
         } catch (e: GeneralSecurityException) {
             logger.e(TAG, "Symmetric decryption failed for alias: $alias", e)
             throw mapException(e)
@@ -88,25 +73,87 @@ internal class EncryptionRepositoryImpl(
     }
 
     override fun getSecurityLevel(alias: String): SecurityLevel {
-        logger.d(TAG, "Getting security level for alias: $alias")
-        return keystoreDataSource.getSecurityLevel(alias)
+        logger.d(TAG, "Getting security level for Tink master key alias: $alias")
+        return try {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            val key = keyStore.getKey(alias, null) as? SecretKey ?: return SecurityLevel.SOFTWARE
+            
+            val factory = SecretKeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
+            val keyInfo = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                when (keyInfo.securityLevel) {
+                    KeyProperties.SECURITY_LEVEL_STRONGBOX -> SecurityLevel.STRONGBOX
+                    KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT -> SecurityLevel.TRUSTED_ENVIRONMENT
+                    else -> SecurityLevel.SOFTWARE
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                if (keyInfo.isInsideSecureHardware) SecurityLevel.TRUSTED_ENVIRONMENT else SecurityLevel.SOFTWARE
+            }
+        } catch (e: Exception) {
+            logger.e(TAG, "Failed to determine security level", e)
+            SecurityLevel.SOFTWARE
+        }
     }
 
     override fun deleteKey(alias: String) {
-        logger.d(TAG, "Deleting key with alias: $alias")
-        keystoreDataSource.deleteKey(alias)
+        logger.d(TAG, "Deleting keyset and master key for alias: $alias")
+        try {
+            // Delete keyset from SharedPreferences
+            context.getSharedPreferences("tink_prefs_$alias", Context.MODE_PRIVATE)
+                .edit { clear() }
+            
+            // Delete master key from Android Keystore
+            val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            if (keyStore.containsAlias(alias)) {
+                keyStore.deleteEntry(alias)
+            }
+        } catch (e: Exception) {
+            logger.e(TAG, "Error deleting key $alias", e)
+        }
     }
 
     override suspend fun getPublicKey(): PublicKey {
         logger.d(TAG, "Retrieving public key from certificate")
+        val path = certificatePathProvider.getCertificatePath()
+            ?: throw CryptoException(
+                "Certificate path not provided by consumer",
+                null,
+                CryptoException.Reason.CERTIFICATE_NOT_FOUND
+            )
+
+        val file = File(path)
+        if (!file.exists()) {
+            throw CryptoException(
+                "Certificate file not found at: $path",
+                null,
+                CryptoException.Reason.CERTIFICATE_NOT_FOUND
+            )
+        }
+
         return try {
-            fileDataSource.getPublicKeyFromCertificate()
-        } catch (e: GeneralSecurityException) {
-            logger.e(TAG, "Security error retrieving public key", e)
-            throw mapException(e)
+            withContext(Dispatchers.IO) {
+                FileInputStream(file).use { inputStream ->
+                    val certFactory = CertificateFactory.getInstance("X.509")
+                    val certificate = certFactory.generateCertificate(inputStream)
+                    certificate.publicKey
+                }
+            }
+        } catch (e: CertificateException) {
+            logger.e(TAG, "Failed to parse certificate", e)
+            throw CryptoException(
+                "Failed to parse certificate",
+                e,
+                CryptoException.Reason.OPERATION_FAILED
+            )
         } catch (e: IOException) {
-            logger.e(TAG, "IO error retrieving public key", e)
-            throw mapException(e)
+            logger.e(TAG, "Failed to read certificate file", e)
+            throw CryptoException(
+                "Failed to read certificate file",
+                e,
+                CryptoException.Reason.OPERATION_FAILED
+            )
         }
     }
 
@@ -161,24 +208,10 @@ internal class EncryptionRepositoryImpl(
     private fun mapException(e: Exception): CryptoException {
         if (e is CryptoException) return e
 
-        return when (e) {
-            is UserNotAuthenticatedException -> CryptoException(
-                "User authentication required",
-                e,
-                CryptoException.Reason.USER_NOT_AUTHENTICATED
-            )
-
-            is KeyPermanentlyInvalidatedException -> CryptoException(
-                "Key permanently invalidated (biometric changed?)",
-                e,
-                CryptoException.Reason.KEY_PERMANENTLY_INVALIDATED
-            )
-
-            else -> CryptoException(
-                e.message ?: "Unknown error",
-                e,
-                CryptoException.Reason.UNKNOWN
-            )
-        }
+        return CryptoException(
+            e.message ?: "Unknown error",
+            e,
+            CryptoException.Reason.UNKNOWN
+        )
     }
 }

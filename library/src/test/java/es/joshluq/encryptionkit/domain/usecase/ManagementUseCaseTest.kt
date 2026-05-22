@@ -20,15 +20,13 @@ class ManagementUseCaseTest {
     fun `InitializeLibraryUseCase should call repository initializeKey`() = runBlocking {
         val useCase = InitializeLibraryUseCase(repository)
         val alias = "test_alias"
-        val requireUserAuth = false
-        val useStrongBox = false
-        val input = InitializeLibraryUseCase.Input(alias, requireUserAuth, useStrongBox)
-        every { repository.initializeKey(any(), any(), any()) } just runs
+        val input = InitializeLibraryUseCase.Input(alias)
+        every { repository.initializeKey(any()) } just runs
 
         val result = useCase(input)
 
         assertTrue(result.isSuccess)
-        verify { repository.initializeKey(alias, requireUserAuth, useStrongBox) }
+        verify { repository.initializeKey(alias) }
     }
 
     @Test

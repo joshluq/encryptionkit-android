@@ -12,8 +12,13 @@ import es.joshluq.encryptionkit.domain.usecase.EncryptSymmetricUseCase
 import es.joshluq.encryptionkit.domain.usecase.GetSecurityLevelUseCase
 import es.joshluq.encryptionkit.domain.usecase.HashDataUseCase
 import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import es.joshluq.encryptionkit.data.provider.SecureDataStoreProvider
 import es.joshluq.foundationkit.manager.Manager
 import es.joshluq.foundationkit.manager.ManagerBuilder
+import es.joshluq.foundationkit.provider.SerializerProvider
+import es.joshluq.foundationkit.provider.StorageProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,15 +53,12 @@ class EncryptionkitManager internal constructor(
     }
 
     fun initialize(config: EncryptionkitConfig) {
-        this.config = config
-        this.component = componentFactory(config)
+        val appContext = config.context.applicationContext
+        this.config = config.copy(context = appContext)
+        this.component = componentFactory(this.config)
         component.logger.i(TAG, "Initializing Encryptionkit SDK with alias: ${config.alias}")
         managerScope.launch {
-            val input = InitializeLibraryUseCase.Input(
-                config.alias,
-                config.requireUserAuth,
-                config.useStrongBox
-            )
+            val input = InitializeLibraryUseCase.Input(config.alias)
             component.initializeLibraryUseCase(input)
         }
     }
@@ -64,11 +66,11 @@ class EncryptionkitManager internal constructor(
     /**
      * Encrypts the provided secure data wrapper.
      */
-    suspend fun encrypt(secureData: SecureBytes): Result<CryptoResult> {
+    suspend fun encrypt(secureData: SecureBytes, associatedData: ByteArray = ByteArray(0)): Result<CryptoResult> {
         if (!isConfigInitialized()) {
             return Result.failure(Exception("Config not initialized"))
         }
-        val input = EncryptSymmetricUseCase.Input(secureData.data, config.alias)
+        val input = EncryptSymmetricUseCase.Input(secureData.data, config.alias, associatedData)
         return component.encryptSymmetricUseCase(input)
             .map { it.result }
             .mapFailure()
@@ -77,13 +79,13 @@ class EncryptionkitManager internal constructor(
     /**
      * Decrypts the provided ciphertext using the configured symmetric key (AES-GCM).
      */
-    suspend fun decrypt(ciphertext: ByteArray, iv: ByteArray): Result<ByteArray> {
+    suspend fun decrypt(ciphertext: ByteArray, associatedData: ByteArray = ByteArray(0)): Result<SecureBytes> {
         if (!isConfigInitialized()) {
             return Result.failure(Exception("Config not initialized"))
         }
-        val input = DecryptSymmetricUseCase.Input(ciphertext, iv, config.alias)
+        val input = DecryptSymmetricUseCase.Input(ciphertext, config.alias, associatedData)
         return component.decryptSymmetricUseCase(input)
-            .map { it.data }
+            .map { SecureBytes(it.data) }
             .mapFailure()
     }
 
@@ -150,6 +152,23 @@ class EncryptionkitManager internal constructor(
         component.hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm.value))
             .map { output -> output.data.joinToString("") { "%02x".format(it) } }
             .mapFailure()
+
+    /**
+     * Creates a secure storage provider that encrypts data using Tink and saves it to DataStore.
+     */
+    fun createSecureStorage(
+        dataStore: DataStore<Preferences>,
+        serializerProvider: SerializerProvider
+    ): StorageProvider {
+        if (!isConfigInitialized()) {
+            throw IllegalStateException("EncryptionkitManager is not initialized")
+        }
+        return SecureDataStoreProvider(
+            dataStore = dataStore,
+            serializerProvider = serializerProvider,
+            encryptionkitManager = this
+        )
+    }
 
     private fun <T> Result<T>.mapFailure(): Result<T> =
         fold(

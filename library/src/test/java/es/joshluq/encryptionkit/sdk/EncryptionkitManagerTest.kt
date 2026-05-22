@@ -3,7 +3,12 @@ package es.joshluq.encryptionkit.sdk
 import es.joshluq.encryptionkit.di.EncryptionkitComponent
 import es.joshluq.encryptionkit.domain.model.*
 import es.joshluq.encryptionkit.domain.usecase.*
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import es.joshluq.encryptionkit.data.provider.SecureDataStoreProvider
+import es.joshluq.foundationkit.provider.SerializerProvider
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
@@ -23,24 +28,23 @@ class EncryptionkitManagerTest {
     private val deleteKeyUseCase: DeleteKeyUseCase = mockk()
     private val hashDataUseCase: HashDataUseCase = mockk()
 
-    private val config = EncryptionkitConfig.build {
+    private val context: android.content.Context = mockk(relaxed = true)
+    private val config = EncryptionkitConfig.build(context) {
         alias = "test_alias"
-        useStrongBox = false
-        requireUserAuth = false
     }
 
     private lateinit var manager: EncryptionkitManager
 
     @Before
     fun setUp() {
-        coEvery { component.initializeLibraryUseCase } returns initializeLibraryUseCase
-        coEvery { component.logger } returns mockk(relaxed = true)
-        coEvery { component.encryptSymmetricUseCase } returns encryptSymmetricUseCase
-        coEvery { component.decryptSymmetricUseCase } returns decryptSymmetricUseCase
-        coEvery { component.encryptAsymmetricUseCase } returns encryptAsymmetricUseCase
-        coEvery { component.getSecurityLevelUseCase } returns getSecurityLevelUseCase
-        coEvery { component.deleteKeyUseCase } returns deleteKeyUseCase
-        coEvery { component.hashDataUseCase } returns hashDataUseCase
+        every { component.initializeLibraryUseCase } returns initializeLibraryUseCase
+        every { component.logger } returns mockk(relaxed = true)
+        every { component.encryptSymmetricUseCase } returns encryptSymmetricUseCase
+        every { component.decryptSymmetricUseCase } returns decryptSymmetricUseCase
+        every { component.encryptAsymmetricUseCase } returns encryptAsymmetricUseCase
+        every { component.getSecurityLevelUseCase } returns getSecurityLevelUseCase
+        every { component.deleteKeyUseCase } returns deleteKeyUseCase
+        every { component.hashDataUseCase } returns hashDataUseCase
 
         manager = EncryptionkitManager{ component }
 
@@ -50,12 +54,13 @@ class EncryptionkitManagerTest {
     @Test
     fun `encrypt should return success result when successful`() = runBlocking {
         val data = byteArrayOf(1, 2, 3)
+        val associatedData = "ad".toByteArray()
         val secureBytes = SecureBytes(data)
-        val expectedResult = CryptoResult("cipher".toByteArray(), "iv".toByteArray())
+        val expectedResult = CryptoResult("cipher".toByteArray())
 
-        coEvery { encryptSymmetricUseCase(any()) } returns Result.success(EncryptSymmetricUseCase.Output(expectedResult))
+        coEvery { encryptSymmetricUseCase(match { it.associatedData.contentEquals(associatedData) }) } returns Result.success(EncryptSymmetricUseCase.Output(expectedResult))
 
-        val result = manager.encrypt(secureBytes)
+        val result = manager.encrypt(secureBytes, associatedData)
 
         assertTrue(result.isSuccess)
         assertEquals(expectedResult, result.getOrNull())
@@ -64,15 +69,15 @@ class EncryptionkitManagerTest {
     @Test
     fun `decrypt should return success result when successful`() = runBlocking {
         val ciphertext = "cipher".toByteArray()
-        val iv = "iv".toByteArray()
+        val associatedData = "ad".toByteArray()
         val expectedPlaintext = "plain".toByteArray()
 
-        coEvery { decryptSymmetricUseCase(any()) } returns Result.success(DecryptSymmetricUseCase.Output(expectedPlaintext))
+        coEvery { decryptSymmetricUseCase(match { it.associatedData.contentEquals(associatedData) }) } returns Result.success(DecryptSymmetricUseCase.Output(expectedPlaintext))
 
-        val result = manager.decrypt(ciphertext, iv)
+        val result = manager.decrypt(ciphertext, associatedData)
 
         assertTrue(result.isSuccess)
-        assertArrayEquals(expectedPlaintext, result.getOrNull())
+        assertArrayEquals(expectedPlaintext, result.getOrNull()?.data)
     }
 
     @Test
@@ -151,5 +156,15 @@ class EncryptionkitManagerTest {
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is CryptoException)
         assertEquals("Encryption failed", result.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun `createSecureStorage should return SecureDataStoreProvider instance`() {
+        val dataStore: DataStore<Preferences> = mockk()
+        val serializerProvider: SerializerProvider = mockk()
+
+        val storageProvider = manager.createSecureStorage(dataStore, serializerProvider)
+
+        assertTrue(storageProvider is SecureDataStoreProvider)
     }
 }
