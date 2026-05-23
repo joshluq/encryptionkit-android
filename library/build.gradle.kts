@@ -17,8 +17,8 @@ configure<LibraryExtension> {
 
 dependencies {
     implementation("es.joshluq.kit:foundationkit:1.2.0-SNAPSHOT")
-    implementation("com.google.crypto.tink:tink-android:1.21.0")
-    implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation(libs.tink.android)
+    implementation(libs.androidx.datastore.preferences)
 }
 
 pluginkitQuality {

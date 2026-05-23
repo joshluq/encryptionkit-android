@@ -1,5 +1,8 @@
 package es.joshluq.encryptionkit.sdk
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import es.joshluq.encryptionkit.data.provider.SecureDataStoreProvider
 import es.joshluq.encryptionkit.di.EncryptionkitComponent
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
@@ -12,9 +15,7 @@ import es.joshluq.encryptionkit.domain.usecase.EncryptSymmetricUseCase
 import es.joshluq.encryptionkit.domain.usecase.GetSecurityLevelUseCase
 import es.joshluq.encryptionkit.domain.usecase.HashDataUseCase
 import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import es.joshluq.encryptionkit.data.provider.SecureDataStoreProvider
+import es.joshluq.foundationkit.manager.ContextManagerFactory
 import es.joshluq.foundationkit.manager.Manager
 import es.joshluq.foundationkit.manager.ManagerBuilder
 import es.joshluq.foundationkit.provider.SerializerProvider
@@ -37,8 +38,13 @@ class EncryptionkitManager internal constructor(
     }
 ) : Manager<EncryptionkitConfig>() {
 
-    companion object {
+    companion object : ContextManagerFactory<EncryptionkitManager, EncryptionkitConfig, EncryptionkitBuilder> {
         private const val TAG = "EncryptionkitManager"
+
+        override val builder: ManagerBuilder<EncryptionkitConfig, EncryptionkitManager> = Builder()
+
+        override fun createBuilder(context: android.content.Context): EncryptionkitBuilder =
+            EncryptionkitBuilder(context)
     }
 
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -52,7 +58,7 @@ class EncryptionkitManager internal constructor(
         MD5("MD5")
     }
 
-    fun initialize(config: EncryptionkitConfig) {
+    internal fun initialize(config: EncryptionkitConfig) {
         val appContext = config.context.applicationContext
         this.config = config.copy(context = appContext)
         this.component = componentFactory(this.config)
@@ -66,9 +72,12 @@ class EncryptionkitManager internal constructor(
     /**
      * Encrypts the provided secure data wrapper.
      */
-    suspend fun encrypt(secureData: SecureBytes, associatedData: ByteArray = ByteArray(0)): Result<CryptoResult> {
-        if (!isConfigInitialized()) {
-            return Result.failure(Exception("Config not initialized"))
+    suspend fun encrypt(
+        secureData: SecureBytes,
+        associatedData: ByteArray = ByteArray(0)
+    ): Result<CryptoResult> {
+        check(isConfigInitialized()) {
+            "EncryptionkitManager is not initialized"
         }
         val input = EncryptSymmetricUseCase.Input(secureData.data, config.alias, associatedData)
         return component.encryptSymmetricUseCase(input)
@@ -79,9 +88,12 @@ class EncryptionkitManager internal constructor(
     /**
      * Decrypts the provided ciphertext using the configured symmetric key (AES-GCM).
      */
-    suspend fun decrypt(ciphertext: ByteArray, associatedData: ByteArray = ByteArray(0)): Result<SecureBytes> {
-        if (!isConfigInitialized()) {
-            return Result.failure(Exception("Config not initialized"))
+    suspend fun decrypt(
+        ciphertext: ByteArray,
+        associatedData: ByteArray = ByteArray(0)
+    ): Result<SecureBytes> {
+        check(isConfigInitialized()) {
+            "EncryptionkitManager is not initialized"
         }
         val input = DecryptSymmetricUseCase.Input(ciphertext, config.alias, associatedData)
         return component.decryptSymmetricUseCase(input)
@@ -93,8 +105,8 @@ class EncryptionkitManager internal constructor(
      * Encrypts the provided data using RSA-OAEP with a public key.
      */
     suspend fun encryptWithPublicKey(data: ByteArray): Result<ByteArray> {
-        if (!isConfigInitialized()) {
-            return Result.failure(Exception("Config not initialized"))
+        check(isConfigInitialized()) {
+            "EncryptionkitManager is not initialized"
         }
         val publicKeyHash =
             config.publicKeyHash ?: return Result.failure(Exception("Public key hash not set"))
@@ -109,8 +121,8 @@ class EncryptionkitManager internal constructor(
      * Retrieves the current hardware security level of the symmetric key.
      */
     suspend fun getSecurityLevel(): Result<SecurityLevel> {
-        if (!isConfigInitialized()) {
-            return Result.failure(Exception("Config not initialized"))
+        check(isConfigInitialized()) {
+            "EncryptionkitManager is not initialized"
         }
         val input = GetSecurityLevelUseCase.Input(config.alias)
         return component.getSecurityLevelUseCase(input)
@@ -122,8 +134,8 @@ class EncryptionkitManager internal constructor(
      * Deletes the symmetric key associated with this instance.
      */
     suspend fun deleteKey(): Result<Unit> {
-        if (!isConfigInitialized()) {
-            return Result.failure(Exception("Config not initialized"))
+        check(isConfigInitialized()) {
+            "EncryptionkitManager is not initialized"
         }
         val input = DeleteKeyUseCase.Input(config.alias)
         return component.deleteKeyUseCase(input)
@@ -160,8 +172,8 @@ class EncryptionkitManager internal constructor(
         dataStore: DataStore<Preferences>,
         serializerProvider: SerializerProvider
     ): StorageProvider {
-        if (!isConfigInitialized()) {
-            throw IllegalStateException("EncryptionkitManager is not initialized")
+        check(isConfigInitialized()) {
+            "EncryptionkitManager is not initialized"
         }
         return SecureDataStoreProvider(
             dataStore = dataStore,
@@ -188,7 +200,7 @@ class EncryptionkitManager internal constructor(
     /**
      * Builder class for creating [EncryptionkitManager] instances.
      */
-    class Builder : ManagerBuilder<EncryptionkitConfig> {
+    class Builder : ManagerBuilder<EncryptionkitConfig, EncryptionkitManager> {
         override fun build(config: EncryptionkitConfig): EncryptionkitManager {
             return EncryptionkitManager().apply {
                 initialize(config)

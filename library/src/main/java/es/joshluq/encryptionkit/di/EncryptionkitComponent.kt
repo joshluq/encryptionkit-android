@@ -1,6 +1,5 @@
 package es.joshluq.encryptionkit.di
 
-
 import es.joshluq.encryptionkit.data.datasource.TinkDataSource
 import es.joshluq.encryptionkit.data.repository.EncryptionRepositoryImpl
 import es.joshluq.encryptionkit.domain.usecase.DecryptSymmetricUseCase

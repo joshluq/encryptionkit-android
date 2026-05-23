@@ -1,8 +1,10 @@
 package es.joshluq.encryptionkit.data.repository
 
 import android.content.Context
+import android.os.Build
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
+import androidx.core.content.edit
 import es.joshluq.encryptionkit.data.datasource.TinkDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
@@ -10,6 +12,8 @@ import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import es.joshluq.foundationkit.log.LoggerKit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
@@ -26,10 +30,6 @@ import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.OAEPParameterSpec
 import javax.crypto.spec.PSource
-import android.os.Build
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import androidx.core.content.edit
 
 internal class EncryptionRepositoryImpl(
     private val tinkDataSource: TinkDataSource,
@@ -74,10 +74,10 @@ internal class EncryptionRepositoryImpl(
 
     override fun getSecurityLevel(alias: String): SecurityLevel {
         logger.d(TAG, "Getting security level for Tink master key alias: $alias")
-        return try {
+        return runCatching {
             val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
             val key = keyStore.getKey(alias, null) as? SecretKey ?: return SecurityLevel.SOFTWARE
-            
+
             val factory = SecretKeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
             val keyInfo = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
 
@@ -91,25 +91,22 @@ internal class EncryptionRepositoryImpl(
                 @Suppress("DEPRECATION")
                 if (keyInfo.isInsideSecureHardware) SecurityLevel.TRUSTED_ENVIRONMENT else SecurityLevel.SOFTWARE
             }
-        } catch (e: Exception) {
+        }.onFailure { e ->
             logger.e(TAG, "Failed to determine security level", e)
-            SecurityLevel.SOFTWARE
-        }
+        }.getOrDefault(SecurityLevel.SOFTWARE)
     }
 
     override fun deleteKey(alias: String) {
         logger.d(TAG, "Deleting keyset and master key for alias: $alias")
-        try {
-            // Delete keyset from SharedPreferences
+        runCatching {
             context.getSharedPreferences("tink_prefs_$alias", Context.MODE_PRIVATE)
                 .edit { clear() }
-            
-            // Delete master key from Android Keystore
+
             val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
             if (keyStore.containsAlias(alias)) {
                 keyStore.deleteEntry(alias)
             }
-        } catch (e: Exception) {
+        }.onFailure { e ->
             logger.e(TAG, "Error deleting key $alias", e)
         }
     }

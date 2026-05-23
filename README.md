@@ -57,15 +57,13 @@ graph TD
 ## 🛠 Usage Example
 
 ### 1. Initialize
-Initialize the SDK using the DSL. The `context` is required to initialize the Tink Keyset storage.
+Initialize the SDK using the simplified DSL entry point.
 
 ```kotlin
-val config = EncryptionkitConfig.build(context) {
+val encryptionManager = EncryptionkitManager.build(context) {
     alias = "my_app_secure_key"
     publicKeyHash = "a1b2c3d4..." // Optional for pinning
 }
-
-val encryptionManager = EncryptionkitManager.Builder().build(config)
 ```
 
 ### 2. Encrypt & Decrypt (Symmetric)

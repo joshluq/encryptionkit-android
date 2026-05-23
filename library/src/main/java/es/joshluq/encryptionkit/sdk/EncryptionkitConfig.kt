@@ -1,8 +1,10 @@
 package es.joshluq.encryptionkit.sdk
 
+import android.content.Context
 import es.joshluq.encryptionkit.di.EncryptionkitDefaults
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.foundationkit.log.LoggerKit
+import es.joshluq.foundationkit.manager.ContextConfigBuilder
 import es.joshluq.foundationkit.manager.ManagerConfig
 
 /**
@@ -16,35 +18,26 @@ import es.joshluq.foundationkit.manager.ManagerConfig
  */
 data class EncryptionkitConfig(
     val alias: String,
-    val context: android.content.Context,
+    val context: Context,
     val publicKeyHash: String? = null,
     val certificatePathProvider: CertificatePathProvider,
     val logger: LoggerKit,
-) : ManagerConfig {
+) : ManagerConfig
 
-    companion object {
-        /**
-         * DSL entry point for creating an [EncryptionkitConfig] instance.
-         */
-        inline fun build(context: android.content.Context, block: Builder.() -> Unit): EncryptionkitConfig =
-            Builder(context).apply(block).build()
-    }
+/**
+ * Builder class for creating [EncryptionkitConfig] instances with Kotlin DSL support.
+ */
+class EncryptionkitBuilder(override val context: Context) : ContextConfigBuilder<EncryptionkitConfig> {
+    var alias: String = "encryption_kit_default_key"
+    var publicKeyHash: String? = null
+    var certificatePathProvider: CertificatePathProvider = EncryptionkitDefaults.emptyPathProvider
+    var logger: LoggerKit = EncryptionkitDefaults.logger
 
-    /**
-     * Builder class for creating [EncryptionkitConfig] instances with Kotlin DSL support.
-     */
-    class Builder(val context: android.content.Context) {
-        var alias: String = "encryption_kit_default_key"
-        var publicKeyHash: String? = null
-        var certificatePathProvider: CertificatePathProvider = EncryptionkitDefaults.emptyPathProvider
-        var logger: LoggerKit = EncryptionkitDefaults.logger
-
-        fun build() = EncryptionkitConfig(
-            alias = alias,
-            context = context,
-            publicKeyHash = publicKeyHash,
-            certificatePathProvider = certificatePathProvider,
-            logger = logger
-        )
-    }
+    override fun build() = EncryptionkitConfig(
+        alias = alias,
+        context = context,
+        publicKeyHash = publicKeyHash,
+        certificatePathProvider = certificatePathProvider,
+        logger = logger
+    )
 }

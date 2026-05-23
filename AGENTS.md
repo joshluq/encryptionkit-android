@@ -55,7 +55,15 @@ We **strictly prohibit** external DI frameworks (Dagger, Hilt, Koin). Use the In
 
 1. **Config (Public):** Mandatory `Context` (stored as `applicationContext`).
 2. **Component (Internal):** The DI container using `by lazy`.
-3. **Manager (Public):** Facade that initializes the component.
+3. **Manager (Public):** Facade that initializes the component via DSL.
+
+### Recommended Initialization Pattern:
+```kotlin
+val manager = EncryptionkitManager.build(context) {
+    alias = "secure_alias"
+    // other config properties
+}
+```
 
 ---
 
