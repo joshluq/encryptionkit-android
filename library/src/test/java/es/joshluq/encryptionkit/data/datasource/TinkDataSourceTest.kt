@@ -6,7 +6,6 @@ import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import es.joshluq.foundationkit.log.LoggerKit
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After

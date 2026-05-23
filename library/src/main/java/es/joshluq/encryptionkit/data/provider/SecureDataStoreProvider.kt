@@ -21,10 +21,10 @@ internal class SecureDataStoreProvider(
     override suspend fun <T : Any> save(key: String, value: T, type: Class<T>) {
         val serializedValue = serializerProvider.serialize(value, type)
         val secureBytes = SecureBytes(serializedValue.toByteArray(Charsets.UTF_8))
-        
+
         // Use the preference key as associated data for extra security
         val associatedData = key.toByteArray(Charsets.UTF_8)
-        
+
         val encryptionResult = encryptionkitManager.encrypt(secureBytes, associatedData).getOrThrow()
         val encryptedBytes = encryptionResult.ciphertext
         val base64String = Base64.encodeToString(encryptedBytes, Base64.NO_WRAP)
@@ -41,10 +41,10 @@ internal class SecureDataStoreProvider(
         val base64String = dataStore.data.map { preferences -> preferences[prefKey] }.first() ?: return null
 
         val encryptedBytes = Base64.decode(base64String, Base64.NO_WRAP)
-        
+
         // Use the same preference key as associated data to verify integrity
         val associatedData = key.toByteArray(Charsets.UTF_8)
-        
+
         val decryptedSecureBytes = encryptionkitManager.decrypt(encryptedBytes, associatedData).getOrThrow()
         val decryptedString = String(decryptedSecureBytes.data, Charsets.UTF_8)
         decryptedSecureBytes.close()

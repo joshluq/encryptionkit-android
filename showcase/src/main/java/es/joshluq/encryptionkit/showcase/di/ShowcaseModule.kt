@@ -10,7 +10,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
-import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
 import es.joshluq.encryptionkit.sdk.EncryptionkitManager
 import es.joshluq.foundationkit.provider.SerializerProvider
 import es.joshluq.foundationkit.provider.StorageProvider
@@ -75,11 +74,9 @@ object ShowcaseModule {
         @ApplicationContext context: Context,
         certificatePathProvider: CertificatePathProvider
     ): EncryptionkitManager {
-        val config = EncryptionkitConfig.build(context) {
+        return EncryptionkitManager.build(context) {
             alias = "showcase_secure_key"
             this.certificatePathProvider = certificatePathProvider
         }
-
-        return EncryptionkitManager.Builder().build(config)
     }
 }

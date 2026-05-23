@@ -29,9 +29,9 @@ class EncryptionkitManagerTest {
     private val hashDataUseCase: HashDataUseCase = mockk()
 
     private val context: android.content.Context = mockk(relaxed = true)
-    private val config = EncryptionkitConfig.build(context) {
+    private val config = EncryptionkitBuilder(context).apply {
         alias = "test_alias"
-    }
+    }.build()
 
     private lateinit var manager: EncryptionkitManager
 
