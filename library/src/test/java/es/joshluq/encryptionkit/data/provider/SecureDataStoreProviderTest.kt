@@ -7,7 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.model.SecureBytes
-import es.joshluq.encryptionkit.sdk.EncryptionkitManager
+import es.joshluq.encryptionkit.sdk.EncryptionKitManager
 import es.joshluq.foundationkit.provider.SerializerProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -27,7 +27,7 @@ class SecureDataStoreProviderTest {
 
     private val dataStore: DataStore<Preferences> = mockk()
     private val serializerProvider: SerializerProvider = mockk()
-    private val encryptionkitManager: EncryptionkitManager = mockk()
+    private val encryptionKitManager: EncryptionKitManager = mockk()
 
     private lateinit var provider: SecureDataStoreProvider
 
@@ -37,7 +37,7 @@ class SecureDataStoreProviderTest {
         provider = SecureDataStoreProvider(
             dataStore,
             serializerProvider,
-            encryptionkitManager
+            encryptionKitManager
         )
     }
 
@@ -55,7 +55,7 @@ class SecureDataStoreProviderTest {
         val base64 = "base64"
 
         every { serializerProvider.serialize(value, String::class.java) } returns serialized
-        coEvery { encryptionkitManager.encrypt(any(), any()) } returns Result.success(
+        coEvery { encryptionKitManager.encrypt(any(), any()) } returns Result.success(
             CryptoResult(encryptedBytes)
         )
         every { Base64.encodeToString(encryptedBytes, Base64.NO_WRAP) } returns base64
@@ -70,9 +70,9 @@ class SecureDataStoreProviderTest {
         provider.save(key, value, String::class.java)
 
         verify { serializerProvider.serialize(value, String::class.java) }
-        coVerify { encryptionkitManager.encrypt(match { it.data.contentEquals(serialized.toByteArray()) }, match { it.contentEquals(key.toByteArray()) }) }
+        coVerify { encryptionKitManager.encrypt(match { it.data.contentEquals(serialized.toByteArray()) }, match { it.contentEquals(key.toByteArray()) }) }
         verify { Base64.encodeToString(encryptedBytes, Base64.NO_WRAP) }
-        verify { mutablePreferences[any()] = base64 }
+        verify { mutablePreferences[any<Preferences.Key<*>>()] = base64 }
     }
 
     @Test
@@ -88,7 +88,7 @@ class SecureDataStoreProviderTest {
         every { dataStore.data } returns flowOf(preferences)
 
         every { Base64.decode(base64, Base64.NO_WRAP) } returns encryptedBytes
-        coEvery { encryptionkitManager.decrypt(encryptedBytes, match { String(it) == key }) } returns Result.success(
+        coEvery { encryptionKitManager.decrypt(encryptedBytes, match { it.contentEquals(key.toByteArray()) }) } returns Result.success(
             SecureBytes(decryptedBytes)
         )
         every { serializerProvider.deserialize(any(), String::class.java) } returns expectedValue
@@ -97,7 +97,7 @@ class SecureDataStoreProviderTest {
 
         assertEquals(expectedValue, result)
         verify { Base64.decode(base64, Base64.NO_WRAP) }
-        coVerify { encryptionkitManager.decrypt(encryptedBytes, match { it.contentEquals(key.toByteArray()) }) }
+        coVerify { encryptionKitManager.decrypt(encryptedBytes, match { it.contentEquals(key.toByteArray()) }) }
         verify { serializerProvider.deserialize(any(), String::class.java) }
     }
 
@@ -113,7 +113,7 @@ class SecureDataStoreProviderTest {
 
         provider.delete(key)
 
-        verify { mutablePreferences.remove(any()) }
+        verify { mutablePreferences.remove(any<Preferences.Key<*>>()) }
     }
 
     @Test

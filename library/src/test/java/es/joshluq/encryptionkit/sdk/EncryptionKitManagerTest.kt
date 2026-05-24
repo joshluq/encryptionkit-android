@@ -1,6 +1,6 @@
 package es.joshluq.encryptionkit.sdk
 
-import es.joshluq.encryptionkit.di.EncryptionkitComponent
+import es.joshluq.encryptionkit.di.EncryptionKitComponent
 import es.joshluq.encryptionkit.domain.model.*
 import es.joshluq.encryptionkit.domain.usecase.*
 import androidx.datastore.core.DataStore
@@ -17,9 +17,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-class EncryptionkitManagerTest {
+class EncryptionKitManagerTest {
 
-    private val component: EncryptionkitComponent = mockk()
+    private val component: EncryptionKitComponent = mockk()
     private val initializeLibraryUseCase: InitializeLibraryUseCase = mockk(relaxed = true)
     private val encryptSymmetricUseCase: EncryptSymmetricUseCase = mockk()
     private val decryptSymmetricUseCase: DecryptSymmetricUseCase = mockk()
@@ -29,11 +29,11 @@ class EncryptionkitManagerTest {
     private val hashDataUseCase: HashDataUseCase = mockk()
 
     private val context: android.content.Context = mockk(relaxed = true)
-    private val config = EncryptionkitBuilder(context).apply {
+    private val config = EncryptionKitBuilder(context).apply {
         alias = "test_alias"
     }.build()
 
-    private lateinit var manager: EncryptionkitManager
+    private lateinit var manager: EncryptionKitManager
 
     @Before
     fun setUp() {
@@ -46,7 +46,7 @@ class EncryptionkitManagerTest {
         every { component.deleteKeyUseCase } returns deleteKeyUseCase
         every { component.hashDataUseCase } returns hashDataUseCase
 
-        manager = EncryptionkitManager{ component }
+        manager = EncryptionKitManager{ component }
 
         manager.initialize(config)
     }

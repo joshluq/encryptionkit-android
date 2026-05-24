@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import es.joshluq.encryptionkit.domain.model.SecureBytes
-import es.joshluq.encryptionkit.sdk.EncryptionkitManager
+import es.joshluq.encryptionkit.sdk.EncryptionKitManager
 import es.joshluq.foundationkit.provider.SerializerProvider
 import es.joshluq.foundationkit.provider.StorageProvider
 import kotlinx.coroutines.flow.first
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.map
 internal class SecureDataStoreProvider(
     private val dataStore: DataStore<Preferences>,
     private val serializerProvider: SerializerProvider,
-    private val encryptionkitManager: EncryptionkitManager
+    private val encryptionKitManager: EncryptionKitManager
 ) : StorageProvider {
 
     override suspend fun <T : Any> save(key: String, value: T, type: Class<T>) {
@@ -25,7 +25,7 @@ internal class SecureDataStoreProvider(
         // Use the preference key as associated data for extra security
         val associatedData = key.toByteArray(Charsets.UTF_8)
 
-        val encryptionResult = encryptionkitManager.encrypt(secureBytes, associatedData).getOrThrow()
+        val encryptionResult = encryptionKitManager.encrypt(secureBytes, associatedData).getOrThrow()
         val encryptedBytes = encryptionResult.ciphertext
         val base64String = Base64.encodeToString(encryptedBytes, Base64.NO_WRAP)
         val prefKey = stringPreferencesKey(key)
@@ -45,7 +45,7 @@ internal class SecureDataStoreProvider(
         // Use the same preference key as associated data to verify integrity
         val associatedData = key.toByteArray(Charsets.UTF_8)
 
-        val decryptedSecureBytes = encryptionkitManager.decrypt(encryptedBytes, associatedData).getOrThrow()
+        val decryptedSecureBytes = encryptionKitManager.decrypt(encryptedBytes, associatedData).getOrThrow()
         val decryptedString = String(decryptedSecureBytes.data, Charsets.UTF_8)
         decryptedSecureBytes.close()
         return serializerProvider.deserialize(decryptedString, type)

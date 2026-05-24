@@ -1,7 +1,7 @@
 package es.joshluq.encryptionkit.sdk
 
 import android.content.Context
-import es.joshluq.encryptionkit.di.EncryptionkitDefaults
+import es.joshluq.encryptionkit.di.EncryptionKitDefaults
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.foundationkit.log.LoggerKit
 import es.joshluq.foundationkit.manager.ContextConfigBuilder
@@ -16,7 +16,7 @@ import es.joshluq.foundationkit.manager.ManagerConfig
  * @property certificatePathProvider Provider for the X.509 certificate path.
  * @property logger The logger instance for the SDK.
  */
-data class EncryptionkitConfig(
+data class EncryptionKitConfig(
     val alias: String,
     val context: Context,
     val publicKeyHash: String? = null,
@@ -25,15 +25,15 @@ data class EncryptionkitConfig(
 ) : ManagerConfig
 
 /**
- * Builder class for creating [EncryptionkitConfig] instances with Kotlin DSL support.
+ * Builder class for creating [EncryptionKitConfig] instances with Kotlin DSL support.
  */
-class EncryptionkitBuilder(override val context: Context) : ContextConfigBuilder<EncryptionkitConfig> {
+class EncryptionKitBuilder(override val context: Context) : ContextConfigBuilder<EncryptionKitConfig> {
     var alias: String = "encryption_kit_default_key"
     var publicKeyHash: String? = null
-    var certificatePathProvider: CertificatePathProvider = EncryptionkitDefaults.emptyPathProvider
-    var logger: LoggerKit = EncryptionkitDefaults.logger
+    var certificatePathProvider: CertificatePathProvider = EncryptionKitDefaults.emptyPathProvider
+    var logger: LoggerKit = EncryptionKitDefaults.logger
 
-    override fun build() = EncryptionkitConfig(
+    override fun build() = EncryptionKitConfig(
         alias = alias,
         context = context,
         publicKeyHash = publicKeyHash,
