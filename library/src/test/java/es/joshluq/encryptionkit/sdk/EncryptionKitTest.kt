@@ -17,7 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-class EncryptionKitManagerTest {
+class EncryptionKitTest {
 
     private val component: EncryptionKitComponent = mockk()
     private val initializeLibraryUseCase: InitializeLibraryUseCase = mockk(relaxed = true)
@@ -33,7 +33,7 @@ class EncryptionKitManagerTest {
         alias = "test_alias"
     }.build()
 
-    private lateinit var manager: EncryptionKitManager
+    private lateinit var manager: EncryptionKit
 
     @Before
     fun setUp() {
@@ -46,7 +46,7 @@ class EncryptionKitManagerTest {
         every { component.deleteKeyUseCase } returns deleteKeyUseCase
         every { component.hashDataUseCase } returns hashDataUseCase
 
-        manager = EncryptionKitManager{ component }
+        manager = EncryptionKit{ component }
 
         manager.initialize(config)
     }
