@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
  * This class acts as a **Facade**, providing a simplified interface to complex cryptographic
  * operations like symmetric encryption (AES-GCM), asymmetric encryption (RSA-OAEP), and hashing.
  */
-class EncryptionKitManager internal constructor(
+class EncryptionKit internal constructor(
     private val componentFactory: (EncryptionKitConfig) -> EncryptionKitComponent = {
         EncryptionKitComponent(
             it
@@ -38,10 +38,10 @@ class EncryptionKitManager internal constructor(
     }
 ) : Manager<EncryptionKitConfig>() {
 
-    companion object : ContextManagerFactory<EncryptionKitManager, EncryptionKitConfig, EncryptionKitBuilder> {
+    companion object : ContextManagerFactory<EncryptionKit, EncryptionKitConfig, EncryptionKitBuilder> {
         private const val TAG = "EncryptionKitManager"
 
-        override val builder: ManagerBuilder<EncryptionKitConfig, EncryptionKitManager> = Builder()
+        override val builder: ManagerBuilder<EncryptionKitConfig, EncryptionKit> = Builder()
 
         override fun createBuilder(context: android.content.Context): EncryptionKitBuilder =
             EncryptionKitBuilder(context)
@@ -178,7 +178,7 @@ class EncryptionKitManager internal constructor(
         return SecureDataStoreProvider(
             dataStore = dataStore,
             serializerProvider = serializerProvider,
-            encryptionKitManager = this
+            encryptionKit = this
         )
     }
 
@@ -198,11 +198,11 @@ class EncryptionKitManager internal constructor(
     }
 
     /**
-     * Builder class for creating [EncryptionKitManager] instances.
+     * Builder class for creating [EncryptionKit] instances.
      */
-    class Builder : ManagerBuilder<EncryptionKitConfig, EncryptionKitManager> {
-        override fun build(config: EncryptionKitConfig): EncryptionKitManager {
-            return EncryptionKitManager().apply {
+    class Builder : ManagerBuilder<EncryptionKitConfig, EncryptionKit> {
+        override fun build(config: EncryptionKitConfig): EncryptionKit {
+            return EncryptionKit().apply {
                 initialize(config)
             }
         }

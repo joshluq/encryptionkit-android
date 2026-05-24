@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.lifecycle.viewModelScope
 import es.joshluq.encryptionkit.domain.model.*
-import es.joshluq.encryptionkit.sdk.EncryptionKitManager
+import es.joshluq.encryptionkit.sdk.EncryptionKit
 import es.joshluq.foundationkit.provider.StorageProvider
 import es.joshluq.foundationkit.provider.read
 import es.joshluq.foundationkit.provider.save
@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ShowcaseViewModel @Inject constructor(
-    private val encryptionKitManager: EncryptionKitManager,
+    private val encryptionKit: EncryptionKit,
     private val secureStorage: StorageProvider
 ) : ViewModel() {
 
@@ -28,7 +28,7 @@ class ShowcaseViewModel @Inject constructor(
     fun encrypt(text: String) {
         val secureData = SecureBytes(text.toByteArray())
         viewModelScope.launch {
-            encryptionKitManager.encrypt(secureData = secureData)
+            encryptionKit.encrypt(secureData = secureData)
                 .onSuccess { result ->
                     lastResult = result
                     _uiState.value = ShowcaseUiState.Success(
@@ -47,7 +47,7 @@ class ShowcaseViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val ciphertext = ciphertextHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-                encryptionKitManager.decrypt(ciphertext)
+                encryptionKit.decrypt(ciphertext)
                     .onSuccess { decryptedBytes ->
                         _uiState.value = ShowcaseUiState.Success("Decrypted: ${String(decryptedBytes.data)}")
                     }
@@ -62,7 +62,7 @@ class ShowcaseViewModel @Inject constructor(
 
     fun encryptAsymmetric(text: String) {
         viewModelScope.launch {
-            encryptionKitManager.encryptWithPublicKey(data = text.toByteArray())
+            encryptionKit.encryptWithPublicKey(data = text.toByteArray())
                 .onSuccess { encrypted ->
                     val hexString = encrypted.joinToString("") { "%02x".format(it) }
                     _uiState.value = ShowcaseUiState.Success("Asymmetric Encrypted: $hexString")
@@ -75,7 +75,7 @@ class ShowcaseViewModel @Inject constructor(
 
     fun hashSHA256(text: String) {
         viewModelScope.launch {
-            encryptionKitManager.hashToHex(text = text, algorithm = EncryptionKitManager.HashAlgorithm.SHA_256)
+            encryptionKit.hashToHex(text = text, algorithm = EncryptionKit.HashAlgorithm.SHA_256)
                 .onSuccess { hash ->
                     _uiState.value = ShowcaseUiState.Success("SHA-256 Hash: $hash")
                 }
@@ -87,7 +87,7 @@ class ShowcaseViewModel @Inject constructor(
 
     fun hashMD5(text: String) {
         viewModelScope.launch {
-            encryptionKitManager.hashToHex(text = text, algorithm = EncryptionKitManager.HashAlgorithm.MD5)
+            encryptionKit.hashToHex(text = text, algorithm = EncryptionKit.HashAlgorithm.MD5)
                 .onSuccess { hash ->
                     _uiState.value = ShowcaseUiState.Success("MD5 Hash: $hash")
                 }
@@ -99,7 +99,7 @@ class ShowcaseViewModel @Inject constructor(
 
     fun checkSecurity() {
         viewModelScope.launch {
-            encryptionKitManager.getSecurityLevel()
+            encryptionKit.getSecurityLevel()
                 .onSuccess { level ->
                     _uiState.value = ShowcaseUiState.Success("Hardware Security Level: $level")
                 }
