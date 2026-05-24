@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.lifecycle.viewModelScope
 import es.joshluq.encryptionkit.domain.model.*
-import es.joshluq.encryptionkit.sdk.EncryptionkitManager
+import es.joshluq.encryptionkit.sdk.EncryptionKitManager
 import es.joshluq.foundationkit.provider.StorageProvider
 import es.joshluq.foundationkit.provider.read
 import es.joshluq.foundationkit.provider.save
@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ShowcaseViewModel @Inject constructor(
-    private val encryptionKitManager: EncryptionkitManager,
+    private val encryptionKitManager: EncryptionKitManager,
     private val secureStorage: StorageProvider
 ) : ViewModel() {
 
@@ -75,7 +75,7 @@ class ShowcaseViewModel @Inject constructor(
 
     fun hashSHA256(text: String) {
         viewModelScope.launch {
-            encryptionKitManager.hashToHex(text = text, algorithm = EncryptionkitManager.HashAlgorithm.SHA_256)
+            encryptionKitManager.hashToHex(text = text, algorithm = EncryptionKitManager.HashAlgorithm.SHA_256)
                 .onSuccess { hash ->
                     _uiState.value = ShowcaseUiState.Success("SHA-256 Hash: $hash")
                 }
@@ -87,7 +87,7 @@ class ShowcaseViewModel @Inject constructor(
 
     fun hashMD5(text: String) {
         viewModelScope.launch {
-            encryptionKitManager.hashToHex(text = text, algorithm = EncryptionkitManager.HashAlgorithm.MD5)
+            encryptionKitManager.hashToHex(text = text, algorithm = EncryptionKitManager.HashAlgorithm.MD5)
                 .onSuccess { hash ->
                     _uiState.value = ShowcaseUiState.Success("MD5 Hash: $hash")
                 }

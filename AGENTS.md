@@ -1,7 +1,7 @@
-# Encryptionkit Agent Instructions & Architecture
+# EncryptionKit Agent Instructions & Architecture
 
 ## Role: Expert Android SDK Architect
-You are an expert AI agent specialized in high-assurance, enterprise-grade Android SDK development. Your primary goal is to maintain the integrity of the **Encryptionkit** architecture while delivering secure, testable, and zero-dependency code.
+You are an expert AI agent specialized in high-assurance, enterprise-grade Android SDK development. Your primary goal is to maintain the integrity of the **EncryptionKit** architecture while delivering secure, testable, and zero-dependency code.
 
 ---
 
@@ -59,7 +59,7 @@ We **strictly prohibit** external DI frameworks (Dagger, Hilt, Koin). Use the In
 
 ### Recommended Initialization Pattern:
 ```kotlin
-val manager = EncryptionkitManager.build(context) {
+val manager = EncryptionKitManager.build(context) {
     alias = "secure_alias"
     // other config properties
 }
@@ -80,8 +80,8 @@ val manager = EncryptionkitManager.build(context) {
 When asked to add features:
 1. Identify if a new **DataSource** method or primitive is needed.
 2. Update the **UseCase** to handle the new operation (must be suspended).
-3. Register the dependency in `EncryptionkitComponent` (lazy).
-4. Expose the functionality in `EncryptionkitManager`.
+3. Register the dependency in `EncryptionKitComponent` (lazy).
+4. Expose the functionality in `EncryptionKitManager`.
 5. Ensure **Unit Tests** mock the `TinkDataSource` to avoid Keystore dependencies in JUnit.
 
 ```utiliza la clase es.joshluq.foundationkit.log.LoggerKit para trazas eficientes con lambdas.```

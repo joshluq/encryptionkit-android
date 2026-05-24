@@ -10,7 +10,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
-import es.joshluq.encryptionkit.sdk.EncryptionkitManager
+import es.joshluq.encryptionkit.sdk.EncryptionKitManager
 import es.joshluq.foundationkit.provider.SerializerProvider
 import es.joshluq.foundationkit.provider.StorageProvider
 import java.io.File
@@ -44,7 +44,7 @@ object ShowcaseModule {
     @Singleton
     fun provideSecureStorage(
         @ApplicationContext context: Context,
-        encryptionkitManager: EncryptionkitManager,
+        encryptionkitManager: EncryptionKitManager,
         serializerProvider: SerializerProvider
     ): StorageProvider {
         return encryptionkitManager.createSecureStorage(
@@ -73,8 +73,8 @@ object ShowcaseModule {
     fun provideEncryptionKitManager(
         @ApplicationContext context: Context,
         certificatePathProvider: CertificatePathProvider
-    ): EncryptionkitManager {
-        return EncryptionkitManager.build(context) {
+    ): EncryptionKitManager {
+        return EncryptionKitManager.build(context) {
             alias = "showcase_secure_key"
             this.certificatePathProvider = certificatePathProvider
         }

@@ -9,14 +9,14 @@ import es.joshluq.encryptionkit.domain.usecase.EncryptSymmetricUseCase
 import es.joshluq.encryptionkit.domain.usecase.GetSecurityLevelUseCase
 import es.joshluq.encryptionkit.domain.usecase.HashDataUseCase
 import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
-import es.joshluq.encryptionkit.sdk.EncryptionkitConfig
+import es.joshluq.encryptionkit.sdk.EncryptionKitConfig
 import es.joshluq.foundationkit.log.LoggerKit
 
 /**
  * Internal Dependency Injection component
  * Following the Internal Dependency Graph pattern.
  */
-internal class EncryptionkitComponent(val config: EncryptionkitConfig) {
+internal class EncryptionKitComponent(val config: EncryptionKitConfig) {
 
     val logger: LoggerKit by lazy { config.logger }
 

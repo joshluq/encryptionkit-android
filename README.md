@@ -1,8 +1,8 @@
-# Encryptionkit for Android 🛡️
+# EncryptionKit for Android 🛡️
 
 **"High-assurance cryptography for modern Android applications."**
 
-Encryptionkit is a robust abstraction layer built on top of **Google Tink** and the **Android Keystore System**. It simplifies complex cryptographic operations by providing a secure-by-default API, enforcing modern standards like **AEAD**, and offering seamless integration with **Jetpack DataStore** for encrypted persistence.
+EncryptionKit is a robust abstraction layer built on top of **Google Tink** and the **Android Keystore System**. It simplifies complex cryptographic operations by providing a secure-by-default API, enforcing modern standards like **AEAD**, and offering seamless integration with **Jetpack DataStore** for encrypted persistence.
 
 ## 🚀 Key Features
 
@@ -17,14 +17,14 @@ Encryptionkit is a robust abstraction layer built on top of **Google Tink** and 
 
 ## 🏗 Architecture
 
-Encryptionkit follows **Clean Architecture** principles. The encryption logic is encapsulated in a dedicated `TinkDataSource` with an internal cache for high performance.
+EncryptionKit follows **Clean Architecture** principles. The encryption logic is encapsulated in a dedicated `TinkDataSource` with an internal cache for high performance.
 
 ```mermaid
 graph TD
     subgraph "SDK Layer (Public API)"
-        Config[EncryptionkitConfig]
-        Builder[EncryptionkitManager.Builder]
-        Facade[EncryptionkitManager Facade]
+        Config[EncryptionKitConfig]
+        Builder[EncryptionKitManager.Builder]
+        Facade[EncryptionKitManager Facade]
         SecStore[SecureDataStoreProvider]
     end
 
@@ -60,7 +60,7 @@ graph TD
 Initialize the SDK using the simplified DSL entry point.
 
 ```kotlin
-val encryptionManager = EncryptionkitManager.build(context) {
+val encryptionManager = EncryptionKitManager.build(context) {
     alias = "my_app_secure_key"
     publicKeyHash = "a1b2c3d4..." // Optional for pinning
 }
