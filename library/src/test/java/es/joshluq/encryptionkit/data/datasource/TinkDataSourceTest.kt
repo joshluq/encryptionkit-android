@@ -2,17 +2,18 @@ package es.joshluq.encryptionkit.data.datasource
 
 import android.content.Context
 import com.google.crypto.tink.Aead
+import com.google.crypto.tink.KeyTemplate
+import com.google.crypto.tink.KeysetHandle
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import es.joshluq.foundationkit.log.LoggerKit
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
+import io.mockk.mockkConstructor
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
-import com.google.crypto.tink.KeysetHandle
 import java.security.GeneralSecurityException
 
 class TinkDataSourceTest {
@@ -33,14 +34,16 @@ class TinkDataSourceTest {
 
     @Test
     fun `getAead should cache Aead instance for same alias`() {
-        mockkStatic(AndroidKeysetManager::class)
-        val mockBuilder = mockk<AndroidKeysetManager.Builder>(relaxed = true)
+        mockkConstructor(AndroidKeysetManager.Builder::class)
         val mockManager = mockk<AndroidKeysetManager>(relaxed = true)
         val mockKeysetHandle = mockk<KeysetHandle>(relaxed = true)
         val mockAead = mockk<Aead>()
 
-        every { AndroidKeysetManager.Builder() } returns mockBuilder
-        every { mockBuilder.build() } returns mockManager
+        every { anyConstructed<AndroidKeysetManager.Builder>().withSharedPref(any(), any(), any()) } answers { it.invocation.self as AndroidKeysetManager.Builder }
+        every { anyConstructed<AndroidKeysetManager.Builder>().withKeyTemplate(any<KeyTemplate>()) } answers { it.invocation.self as AndroidKeysetManager.Builder }
+        every { anyConstructed<AndroidKeysetManager.Builder>().withMasterKeyUri(any()) } answers { it.invocation.self as AndroidKeysetManager.Builder }
+        every { anyConstructed<AndroidKeysetManager.Builder>().build() } returns mockManager
+        
         every { mockManager.keysetHandle } returns mockKeysetHandle
         every { mockKeysetHandle.getPrimitive(any(), Aead::class.java) } returns mockAead
 
@@ -53,15 +56,17 @@ class TinkDataSourceTest {
 
     @Test
     fun `getAead should recover when first initialization fails`() {
-        mockkStatic(AndroidKeysetManager::class)
-        val mockBuilder = mockk<AndroidKeysetManager.Builder>(relaxed = true)
+        mockkConstructor(AndroidKeysetManager.Builder::class)
         val mockManager = mockk<AndroidKeysetManager>(relaxed = true)
         val mockKeysetHandle = mockk<KeysetHandle>(relaxed = true)
         val mockAead = mockk<Aead>()
 
-        every { AndroidKeysetManager.Builder() } returns mockBuilder
+        every { anyConstructed<AndroidKeysetManager.Builder>().withSharedPref(any(), any(), any()) } answers { it.invocation.self as AndroidKeysetManager.Builder }
+        every { anyConstructed<AndroidKeysetManager.Builder>().withKeyTemplate(any<KeyTemplate>()) } answers { it.invocation.self as AndroidKeysetManager.Builder }
+        every { anyConstructed<AndroidKeysetManager.Builder>().withMasterKeyUri(any()) } answers { it.invocation.self as AndroidKeysetManager.Builder }
         // Fail on first build(), succeed on subsequent
-        every { mockBuilder.build() } throws GeneralSecurityException("Keystore error") andThen mockManager
+        every { anyConstructed<AndroidKeysetManager.Builder>().build() } throws GeneralSecurityException("Keystore error") andThen mockManager
+        
         every { mockManager.keysetHandle } returns mockKeysetHandle
         every { mockKeysetHandle.getPrimitive(any(), Aead::class.java) } returns mockAead
 

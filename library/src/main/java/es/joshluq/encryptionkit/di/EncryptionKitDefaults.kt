@@ -20,7 +20,7 @@ internal object EncryptionKitDefaults {
      */
     val logger: LoggerKit by lazy {
         LoggerKit.Builder()
-            .setProvider(LoggerDefaults.defaultLogProvider(tagPrefix = TAG))
+            .addProvider(LoggerDefaults.defaultLogProvider(tagPrefix = TAG))
             .build()
     }
 
