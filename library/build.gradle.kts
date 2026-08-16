@@ -16,7 +16,7 @@ configure<LibraryExtension> {
 }
 
 dependencies {
-    implementation("es.joshluq.kit:foundationkit:1.3.0")
+    implementation("es.joshluq.kit:foundationkit:1.4.0")
     implementation(libs.tink.android)
     implementation(libs.androidx.datastore.preferences)
 }
