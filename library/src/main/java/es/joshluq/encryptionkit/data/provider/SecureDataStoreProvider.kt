@@ -45,7 +45,15 @@ internal class SecureDataStoreProvider(
         // Use the same preference key as associated data to verify integrity
         val associatedData = key.toByteArray(Charsets.UTF_8)
 
-        val decryptedSecureBytes = encryptionKit.decrypt(encryptedBytes, associatedData).getOrThrow()
+        val decryptionResult = encryptionKit.decrypt(encryptedBytes, associatedData)
+
+        if (decryptionResult.isFailure) {
+            // Self-healing: delete the undecryptable entry from DataStore
+            delete(key)
+            return null
+        }
+
+        val decryptedSecureBytes = decryptionResult.getOrThrow()
         val decryptedString = String(decryptedSecureBytes.data, Charsets.UTF_8)
         decryptedSecureBytes.close()
         return serializerProvider.deserialize(decryptedString, type)
