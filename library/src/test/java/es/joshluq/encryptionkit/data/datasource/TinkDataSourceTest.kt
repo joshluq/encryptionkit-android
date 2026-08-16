@@ -13,6 +13,7 @@ import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
 import com.google.crypto.tink.KeysetHandle
+import java.security.GeneralSecurityException
 
 class TinkDataSourceTest {
 
@@ -48,5 +49,25 @@ class TinkDataSourceTest {
         val aead2 = dataSource.getAead(alias)
 
         assertSame(aead1, aead2)
+    }
+
+    @Test
+    fun `getAead should recover when first initialization fails`() {
+        mockkStatic(AndroidKeysetManager::class)
+        val mockBuilder = mockk<AndroidKeysetManager.Builder>(relaxed = true)
+        val mockManager = mockk<AndroidKeysetManager>(relaxed = true)
+        val mockKeysetHandle = mockk<KeysetHandle>(relaxed = true)
+        val mockAead = mockk<Aead>()
+
+        every { AndroidKeysetManager.Builder() } returns mockBuilder
+        // Fail on first build(), succeed on subsequent
+        every { mockBuilder.build() } throws GeneralSecurityException("Keystore error") andThen mockManager
+        every { mockManager.keysetHandle } returns mockKeysetHandle
+        every { mockKeysetHandle.getPrimitive(any(), Aead::class.java) } returns mockAead
+
+        val alias = "test_alias"
+        val aead = dataSource.getAead(alias)
+
+        assertSame(mockAead, aead)
     }
 }
