@@ -1,6 +1,7 @@
 package es.joshluq.encryptionkit.data.datasource
 
 import android.content.Context
+import androidx.core.content.edit
 import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.RegistryConfiguration
@@ -36,7 +37,13 @@ internal class TinkDataSource(
 
     fun getAead(alias: String): Aead {
         return aeadCache.getOrPut(alias) {
-            createAead(alias)
+            try {
+                createAead(alias)
+            } catch (e: Exception) {
+                logger.w(TAG, "Initial Aead creation failed for $alias. Attempting recovery...", e)
+                recover(alias)
+                createAead(alias)
+            }
         }
     }
 
@@ -55,6 +62,23 @@ internal class TinkDataSource(
         } catch (e: IOException) {
             logger.e(TAG, "IO error initializing AndroidKeysetManager for alias $alias", e)
             throw e
+        }
+    }
+
+    private fun recover(alias: String) {
+        logger.i(TAG, "Recovering Tink state for alias: $alias")
+        runCatching {
+            // 1. Clear SharedPreferences
+            context.getSharedPreferences("tink_prefs_$alias", Context.MODE_PRIVATE)
+                .edit { clear() }
+
+            // 2. Delete from Keystore
+            val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            if (keyStore.containsAlias(alias)) {
+                keyStore.deleteEntry(alias)
+            }
+        }.onFailure { e ->
+            logger.e(TAG, "Recovery failed for alias: $alias", e)
         }
     }
 }
