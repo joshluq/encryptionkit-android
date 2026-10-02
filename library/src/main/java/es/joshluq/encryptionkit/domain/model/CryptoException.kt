@@ -6,9 +6,8 @@ package es.joshluq.encryptionkit.domain.model
 class CryptoException(
     message: String,
     cause: Throwable? = null,
-    val reason: Reason = Reason.UNKNOWN
+    val reason: Reason = Reason.UNKNOWN,
 ) : Exception(message, cause) {
-
     /**
      * Categorizes the specific reason for the failure, allowing the UI/Consumer to react appropriately.
      */
@@ -39,6 +38,6 @@ class CryptoException(
         CERTIFICATE_NOT_FOUND,
 
         /** Unknown or unclassified error. */
-        UNKNOWN
+        UNKNOWN,
     }
 }

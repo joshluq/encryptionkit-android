@@ -7,24 +7,24 @@ import es.joshluq.foundationkit.usecase.UseCaseInput
 import es.joshluq.foundationkit.usecase.UseCaseOutput
 
 internal class EncryptAsymmetricUseCase(
-    private val repository: EncryptionRepository
+    private val repository: EncryptionRepository,
 ) : UseCase<EncryptAsymmetricUseCase.Input, EncryptAsymmetricUseCase.Output> {
-
-    override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val result = if (input.secureData != null) {
-            repository.encryptAsymmetric(input.secureData.data, input.publicKeyHash)
-        } else {
-            repository.encryptAsymmetric(input.data ?: byteArrayOf(), input.publicKeyHash)
+    override suspend fun invoke(input: Input): Result<Output> =
+        runCatching {
+            val result =
+                if (input.secureData != null) {
+                    repository.encryptAsymmetric(input.secureData.data, input.publicKeyHash)
+                } else {
+                    repository.encryptAsymmetric(input.data ?: byteArrayOf(), input.publicKeyHash)
+                }
+            Output(result)
         }
-        Output(result)
-    }
 
     data class Input(
         val data: ByteArray? = null,
         val secureData: SecureBytes? = null,
-        val publicKeyHash: String
+        val publicKeyHash: String,
     ) : UseCaseInput {
-
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -46,8 +46,9 @@ internal class EncryptAsymmetricUseCase(
         }
     }
 
-    data class Output(val data: ByteArray) : UseCaseOutput {
-
+    data class Output(
+        val data: ByteArray,
+    ) : UseCaseOutput {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -57,8 +58,6 @@ internal class EncryptAsymmetricUseCase(
             return data.contentEquals(other.data)
         }
 
-        override fun hashCode(): Int {
-            return data.contentHashCode()
-        }
+        override fun hashCode(): Int = data.contentHashCode()
     }
 }

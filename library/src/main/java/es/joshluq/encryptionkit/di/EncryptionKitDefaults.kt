@@ -9,7 +9,6 @@ import es.joshluq.foundationkit.log.LoggerKit
  * Strictly follows the 'Defaults' pattern for internal configuration.
  */
 internal object EncryptionKitDefaults {
-
     /**
      * Default tag for logging.
      */
@@ -19,7 +18,8 @@ internal object EncryptionKitDefaults {
      * Default [LoggerKit] instance for the SDK.
      */
     val logger: LoggerKit by lazy {
-        LoggerKit.Builder()
+        LoggerKit
+            .Builder()
             .addProvider(LoggerDefaults.defaultLogProvider(tagPrefix = TAG))
             .build()
     }
@@ -39,10 +39,14 @@ internal object EncryptionKitDefaults {
  * Message lambda is only executed if it's necessary (handled by the provider's level check).
  */
 internal inline fun LoggerKit.v(message: () -> String) = v(EncryptionKitDefaults.TAG, message())
+
 internal inline fun LoggerKit.d(message: () -> String) = d(EncryptionKitDefaults.TAG, message())
+
 internal inline fun LoggerKit.i(message: () -> String) = i(EncryptionKitDefaults.TAG, message())
+
 internal inline fun LoggerKit.w(message: () -> String) = w(EncryptionKitDefaults.TAG, message())
+
 internal inline fun LoggerKit.e(
     throwable: Throwable? = null,
-    message: () -> String
+    message: () -> String,
 ) = e(EncryptionKitDefaults.TAG, message(), throwable)

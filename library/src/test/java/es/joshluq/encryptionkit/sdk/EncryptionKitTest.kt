@@ -1,11 +1,20 @@
 package es.joshluq.encryptionkit.sdk
 
-import es.joshluq.encryptionkit.di.EncryptionKitComponent
-import es.joshluq.encryptionkit.domain.model.*
-import es.joshluq.encryptionkit.domain.usecase.*
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import es.joshluq.encryptionkit.data.provider.SecureDataStoreProvider
+import es.joshluq.encryptionkit.di.EncryptionKitComponent
+import es.joshluq.encryptionkit.domain.model.CryptoException
+import es.joshluq.encryptionkit.domain.model.CryptoResult
+import es.joshluq.encryptionkit.domain.model.SecureBytes
+import es.joshluq.encryptionkit.domain.model.SecurityLevel
+import es.joshluq.encryptionkit.domain.usecase.DecryptSymmetricUseCase
+import es.joshluq.encryptionkit.domain.usecase.DeleteKeyUseCase
+import es.joshluq.encryptionkit.domain.usecase.EncryptAsymmetricUseCase
+import es.joshluq.encryptionkit.domain.usecase.EncryptSymmetricUseCase
+import es.joshluq.encryptionkit.domain.usecase.GetSecurityLevelUseCase
+import es.joshluq.encryptionkit.domain.usecase.HashDataUseCase
+import es.joshluq.encryptionkit.domain.usecase.InitializeLibraryUseCase
 import es.joshluq.foundationkit.provider.SerializerProvider
 import io.mockk.coEvery
 import io.mockk.every
@@ -18,7 +27,6 @@ import org.junit.Before
 import org.junit.Test
 
 class EncryptionKitTest {
-
     private val component: EncryptionKitComponent = mockk()
     private val initializeLibraryUseCase: InitializeLibraryUseCase = mockk(relaxed = true)
     private val encryptSymmetricUseCase: EncryptSymmetricUseCase = mockk()
@@ -29,9 +37,11 @@ class EncryptionKitTest {
     private val hashDataUseCase: HashDataUseCase = mockk()
 
     private val context: android.content.Context = mockk(relaxed = true)
-    private val config = EncryptionKitBuilder(context).apply {
-        alias = "test_alias"
-    }.build()
+    private val config =
+        EncryptionKitBuilder(context)
+            .apply {
+                alias = "test_alias"
+            }.build()
 
     private lateinit var manager: EncryptionKit
 
@@ -46,117 +56,127 @@ class EncryptionKitTest {
         every { component.deleteKeyUseCase } returns deleteKeyUseCase
         every { component.hashDataUseCase } returns hashDataUseCase
 
-        manager = EncryptionKit{ component }
+        manager = EncryptionKit { component }
 
         manager.initialize(config)
     }
 
     @Test
-    fun `encrypt should return success result when successful`() = runBlocking {
-        val data = byteArrayOf(1, 2, 3)
-        val associatedData = "ad".toByteArray()
-        val secureBytes = SecureBytes(data)
-        val expectedResult = CryptoResult("cipher".toByteArray())
+    fun `encrypt should return success result when successful`() =
+        runBlocking {
+            val data = byteArrayOf(1, 2, 3)
+            val associatedData = "ad".toByteArray()
+            val secureBytes = SecureBytes(data)
+            val expectedResult = CryptoResult("cipher".toByteArray())
 
-        coEvery { encryptSymmetricUseCase(match { it.associatedData.contentEquals(associatedData) }) } returns Result.success(EncryptSymmetricUseCase.Output(expectedResult))
+            coEvery { encryptSymmetricUseCase(match { it.associatedData.contentEquals(associatedData) }) } returns
+                Result.success(EncryptSymmetricUseCase.Output(expectedResult))
 
-        val result = manager.encrypt(secureBytes, associatedData)
+            val result = manager.encrypt(secureBytes, associatedData)
 
-        assertTrue(result.isSuccess)
-        assertEquals(expectedResult, result.getOrNull())
-    }
-
-    @Test
-    fun `decrypt should return success result when successful`() = runBlocking {
-        val ciphertext = "cipher".toByteArray()
-        val associatedData = "ad".toByteArray()
-        val expectedPlaintext = "plain".toByteArray()
-
-        coEvery { decryptSymmetricUseCase(match { it.associatedData.contentEquals(associatedData) }) } returns Result.success(DecryptSymmetricUseCase.Output(expectedPlaintext))
-
-        val result = manager.decrypt(ciphertext, associatedData)
-
-        assertTrue(result.isSuccess)
-        assertArrayEquals(expectedPlaintext, result.getOrNull()?.data)
-    }
+            assertTrue(result.isSuccess)
+            assertEquals(expectedResult, result.getOrNull())
+        }
 
     @Test
-    fun `encryptWithPublicKey should return success result when successful`() = runBlocking {
-        val data = "data".toByteArray()
-        val expectedCiphertext = "cipher_asym".toByteArray()
+    fun `decrypt should return success result when successful`() =
+        runBlocking {
+            val ciphertext = "cipher".toByteArray()
+            val associatedData = "ad".toByteArray()
+            val expectedPlaintext = "plain".toByteArray()
 
-        // Ensure config has public key hash
-        val configWithHash = config.copy(publicKeyHash = "some_hash")
-        manager.initialize(configWithHash)
+            coEvery { decryptSymmetricUseCase(match { it.associatedData.contentEquals(associatedData) }) } returns
+                Result.success(DecryptSymmetricUseCase.Output(expectedPlaintext))
 
-        coEvery { encryptAsymmetricUseCase(any()) } returns Result.success(EncryptAsymmetricUseCase.Output(expectedCiphertext))
+            val result = manager.decrypt(ciphertext, associatedData)
 
-        val result = manager.encryptWithPublicKey(data)
-
-        assertTrue(result.isSuccess)
-        assertArrayEquals(expectedCiphertext, result.getOrNull())
-    }
-
-    @Test
-    fun `getSecurityLevel should return success result when successful`() = runBlocking {
-        val expectedLevel = SecurityLevel.STRONGBOX
-
-        coEvery { getSecurityLevelUseCase(any()) } returns Result.success(GetSecurityLevelUseCase.Output(expectedLevel))
-
-        val result = manager.getSecurityLevel()
-
-        assertTrue(result.isSuccess)
-        assertEquals(expectedLevel, result.getOrNull())
-    }
+            assertTrue(result.isSuccess)
+            assertArrayEquals(expectedPlaintext, result.getOrNull()?.data)
+        }
 
     @Test
-    fun `deleteKey should return success when successful`() = runBlocking {
-        coEvery { deleteKeyUseCase(any()) } returns Result.success(es.joshluq.foundationkit.usecase.NoneOutput)
+    fun `encryptWithPublicKey should return success result when successful`() =
+        runBlocking {
+            val data = "data".toByteArray()
+            val expectedCiphertext = "cipher_asym".toByteArray()
 
-        val result = manager.deleteKey()
+            // Ensure config has public key hash
+            val configWithHash = config.copy(publicKeyHash = "some_hash")
+            manager.initialize(configWithHash)
 
-        assertTrue(result.isSuccess)
-    }
+            coEvery { encryptAsymmetricUseCase(any()) } returns Result.success(EncryptAsymmetricUseCase.Output(expectedCiphertext))
 
-    @Test
-    fun `hash should return success result when successful`() = runBlocking {
-        val data = byteArrayOf(1, 2, 3)
-        val expectedHash = byteArrayOf(4, 5, 6)
+            val result = manager.encryptWithPublicKey(data)
 
-        coEvery { hashDataUseCase(any()) } returns Result.success(HashDataUseCase.Output(expectedHash))
-
-        val result = manager.hash(data)
-
-        assertTrue(result.isSuccess)
-        assertArrayEquals(expectedHash, result.getOrNull())
-    }
+            assertTrue(result.isSuccess)
+            assertArrayEquals(expectedCiphertext, result.getOrNull())
+        }
 
     @Test
-    fun `hashToHex should return hex string result`() = runBlocking {
-        val text = "test"
-        val mockHash = byteArrayOf(0x00, 0xff.toByte())
+    fun `getSecurityLevel should return success result when successful`() =
+        runBlocking {
+            val expectedLevel = SecurityLevel.STRONGBOX
 
-        coEvery { hashDataUseCase(any()) } returns Result.success(HashDataUseCase.Output(mockHash))
+            coEvery { getSecurityLevelUseCase(any()) } returns Result.success(GetSecurityLevelUseCase.Output(expectedLevel))
 
-        val result = manager.hashToHex(text)
+            val result = manager.getSecurityLevel()
 
-        assertTrue(result.isSuccess)
-        assertEquals("00ff", result.getOrNull())
-    }
+            assertTrue(result.isSuccess)
+            assertEquals(expectedLevel, result.getOrNull())
+        }
 
     @Test
-    fun `any function should return failure when use case fails`() = runBlocking {
-        val secureBytes = SecureBytes("data".toByteArray())
-        val exception = Exception("Encryption failed")
+    fun `deleteKey should return success when successful`() =
+        runBlocking {
+            coEvery { deleteKeyUseCase(any()) } returns Result.success(es.joshluq.foundationkit.usecase.NoneOutput)
 
-        coEvery { encryptSymmetricUseCase(any()) } returns Result.failure(exception)
+            val result = manager.deleteKey()
 
-        val result = manager.encrypt(secureBytes)
+            assertTrue(result.isSuccess)
+        }
 
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is CryptoException)
-        assertEquals("Encryption failed", result.exceptionOrNull()?.message)
-    }
+    @Test
+    fun `hash should return success result when successful`() =
+        runBlocking {
+            val data = byteArrayOf(1, 2, 3)
+            val expectedHash = byteArrayOf(4, 5, 6)
+
+            coEvery { hashDataUseCase(any()) } returns Result.success(HashDataUseCase.Output(expectedHash))
+
+            val result = manager.hash(data)
+
+            assertTrue(result.isSuccess)
+            assertArrayEquals(expectedHash, result.getOrNull())
+        }
+
+    @Test
+    fun `hashToHex should return hex string result`() =
+        runBlocking {
+            val text = "test"
+            val mockHash = byteArrayOf(0x00, 0xff.toByte())
+
+            coEvery { hashDataUseCase(any()) } returns Result.success(HashDataUseCase.Output(mockHash))
+
+            val result = manager.hashToHex(text)
+
+            assertTrue(result.isSuccess)
+            assertEquals("00ff", result.getOrNull())
+        }
+
+    @Test
+    fun `any function should return failure when use case fails`() =
+        runBlocking {
+            val secureBytes = SecureBytes("data".toByteArray())
+            val exception = Exception("Encryption failed")
+
+            coEvery { encryptSymmetricUseCase(any()) } returns Result.failure(exception)
+
+            val result = manager.encrypt(secureBytes)
+
+            assertTrue(result.isFailure)
+            assertTrue(result.exceptionOrNull() is CryptoException)
+            assertEquals("Encryption failed", result.exceptionOrNull()?.message)
+        }
 
     @Test
     fun `createSecureStorage should return SecureDataStoreProvider instance`() {

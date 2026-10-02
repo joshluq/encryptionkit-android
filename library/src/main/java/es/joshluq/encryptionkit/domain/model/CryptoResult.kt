@@ -6,7 +6,7 @@ package es.joshluq.encryptionkit.domain.model
  * @property ciphertext The encrypted data as a byte array.
  */
 data class CryptoResult(
-    val ciphertext: ByteArray
+    val ciphertext: ByteArray,
 ) {
     /**
      * Converts the ciphertext to a Hexadecimal string.
@@ -20,7 +20,5 @@ data class CryptoResult(
         return ciphertext.contentEquals(other.ciphertext)
     }
 
-    override fun hashCode(): Int {
-        return ciphertext.contentHashCode()
-    }
+    override fun hashCode(): Int = ciphertext.contentHashCode()
 }

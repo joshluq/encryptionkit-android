@@ -20,5 +20,5 @@ enum class SecurityLevel {
      * The key is stored in a dedicated Secure Element (StrongBox).
      * This provides the highest level of security, resistant to physical tampering and side-channel attacks.
      */
-    STRONGBOX
+    STRONGBOX,
 }

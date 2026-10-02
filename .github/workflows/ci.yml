@@ -1,27 +1,25 @@
-name: Publish EncryptionKit Snapshot
+name: CI Pull Request Check
 on:
-  push:
+  pull_request:
     branches:
+      - main
       - develop
     paths-ignore:
       - '**.md'
       - '.agents/**'
       - 'docs/**'
-      - 'showcase/**'
       - '.gitignore'
       - 'LICENSE'
   workflow_dispatch:
 concurrency:
-  group: publish-snapshot-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  publish:
-    name: Test and Publish Snapshot
+  validate:
+    name: Build and Test
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
     permissions:
       contents: read
-      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,10 +30,11 @@ jobs:
           distribution: 'temurin'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
-      - name: Test and Publish Snapshot to GitHub Packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
+      - name: Check Code Formatting (Spotless)
         run: |
           chmod +x gradlew
-          ./gradlew test publish -PversionType="-SNAPSHOT"
+          ./gradlew spotlessCheck
+      - name: Run Unit Tests
+        run: ./gradlew test
+      - name: Verify Showcase App Build
+        run: ./gradlew :showcase:assembleDebug

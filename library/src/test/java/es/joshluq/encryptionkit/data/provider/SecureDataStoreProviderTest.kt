@@ -23,7 +23,6 @@ import org.junit.Before
 import org.junit.Test
 
 class SecureDataStoreProviderTest {
-
     private val dataStore: DataStore<Preferences> = mockk()
     private val serializerProvider: SerializerProvider = mockk()
     private val encryptionKit: EncryptionKit = mockk()
@@ -34,11 +33,12 @@ class SecureDataStoreProviderTest {
     fun setUp() {
         mockkStatic(Base64::class)
         mockkStatic("androidx.datastore.preferences.core.PreferencesKt")
-        provider = SecureDataStoreProvider(
-            dataStore,
-            serializerProvider,
-            encryptionKit
-        )
+        provider =
+            SecureDataStoreProvider(
+                dataStore,
+                serializerProvider,
+                encryptionKit,
+            )
     }
 
     @After
@@ -47,90 +47,94 @@ class SecureDataStoreProviderTest {
     }
 
     @Test
-    fun `save should serialize, encrypt with associated data and store in dataStore`() = runTest {
-        val key = "key"
-        val value = "value"
-        val serialized = "serialized"
-        val encryptedBytes = "encrypted".toByteArray()
-        val base64 = "base64"
+    fun `save should serialize, encrypt with associated data and store in dataStore`() =
+        runTest {
+            val key = "key"
+            val value = "value"
+            val serialized = "serialized"
+            val encryptedBytes = "encrypted".toByteArray()
+            val base64 = "base64"
 
-        every { serializerProvider.serialize(value, String::class.java) } returns serialized
-        coEvery {
-            encryptionKit.encrypt(
-                match { it.data.contentEquals(serialized.toByteArray(Charsets.UTF_8)) },
-                match { it.contentEquals(key.toByteArray(Charsets.UTF_8)) }
-            )
-        } answers { Result.success(CryptoResult(encryptedBytes)) }
-        every { Base64.encodeToString(encryptedBytes, Base64.NO_WRAP) } returns base64
+            every { serializerProvider.serialize(value, String::class.java) } returns serialized
+            coEvery {
+                encryptionKit.encrypt(
+                    match { it.data.contentEquals(serialized.toByteArray(Charsets.UTF_8)) },
+                    match { it.contentEquals(key.toByteArray(Charsets.UTF_8)) },
+                )
+            } answers { Result.success(CryptoResult(encryptedBytes)) }
+            every { Base64.encodeToString(encryptedBytes, Base64.NO_WRAP) } returns base64
 
-        val mutablePreferences = mockk<MutablePreferences>(relaxed = true)
-        coEvery { dataStore.edit(any()) } coAnswers {
-            val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
-            transform(mutablePreferences)
-            mutablePreferences
+            val mutablePreferences = mockk<MutablePreferences>(relaxed = true)
+            coEvery { dataStore.edit(any()) } coAnswers {
+                val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
+                transform(mutablePreferences)
+                mutablePreferences
+            }
+
+            provider.save(key, value, String::class.java)
+
+            verify { serializerProvider.serialize(value, String::class.java) }
+            verify { Base64.encodeToString(encryptedBytes, Base64.NO_WRAP) }
+            verify { mutablePreferences[any<Preferences.Key<String>>()] = base64 }
         }
 
-        provider.save(key, value, String::class.java)
-
-        verify { serializerProvider.serialize(value, String::class.java) }
-        verify { Base64.encodeToString(encryptedBytes, Base64.NO_WRAP) }
-        verify { mutablePreferences[any<Preferences.Key<String>>()] = base64 }
-    }
-
     @Test
-    fun `read should fetch from dataStore, decrypt with associated data and deserialize`() = runTest {
-        val key = "key"
-        val base64 = "base64"
-        val encryptedBytes = "encrypted".toByteArray()
-        val decryptedBytes = "decrypted".toByteArray()
-        val expectedValue = "value"
+    fun `read should fetch from dataStore, decrypt with associated data and deserialize`() =
+        runTest {
+            val key = "key"
+            val base64 = "base64"
+            val encryptedBytes = "encrypted".toByteArray()
+            val decryptedBytes = "decrypted".toByteArray()
+            val expectedValue = "value"
 
-        val preferences = mockk<Preferences>()
-        every { preferences[any<Preferences.Key<String>>()] } returns base64
-        every { dataStore.data } returns flowOf(preferences)
+            val preferences = mockk<Preferences>()
+            every { preferences[any<Preferences.Key<String>>()] } returns base64
+            every { dataStore.data } returns flowOf(preferences)
 
-        every { Base64.decode(base64, Base64.NO_WRAP) } returns encryptedBytes
-        coEvery {
-            encryptionKit.decrypt(
-                encryptedBytes,
-                match { it.contentEquals(key.toByteArray(Charsets.UTF_8)) }
-            )
-        } answers { Result.success(SecureBytes(decryptedBytes)) }
-        every { serializerProvider.deserialize(any(), String::class.java) } returns expectedValue
+            every { Base64.decode(base64, Base64.NO_WRAP) } returns encryptedBytes
+            coEvery {
+                encryptionKit.decrypt(
+                    encryptedBytes,
+                    match { it.contentEquals(key.toByteArray(Charsets.UTF_8)) },
+                )
+            } answers { Result.success(SecureBytes(decryptedBytes)) }
+            every { serializerProvider.deserialize(any(), String::class.java) } returns expectedValue
 
-        val result = provider.read(key, String::class.java)
+            val result = provider.read(key, String::class.java)
 
-        assertEquals(expectedValue, result)
-        verify { Base64.decode(base64, Base64.NO_WRAP) }
-        verify { serializerProvider.deserialize(any(), String::class.java) }
-    }
-
-    @Test
-    fun `delete should remove key from dataStore`() = runTest {
-        val key = "key"
-        val mutablePreferences = mockk<MutablePreferences>(relaxed = true)
-        coEvery { dataStore.edit(any()) } coAnswers {
-            val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
-            transform(mutablePreferences)
-            mutablePreferences
+            assertEquals(expectedValue, result)
+            verify { Base64.decode(base64, Base64.NO_WRAP) }
+            verify { serializerProvider.deserialize(any(), String::class.java) }
         }
 
-        provider.delete(key)
-
-        verify { mutablePreferences.remove(any<Preferences.Key<String>>()) }
-    }
-
     @Test
-    fun `clear should clear dataStore`() = runTest {
-        val mutablePreferences = mockk<MutablePreferences>(relaxed = true)
-        coEvery { dataStore.edit(any()) } coAnswers {
-            val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
-            transform(mutablePreferences)
-            mutablePreferences
+    fun `delete should remove key from dataStore`() =
+        runTest {
+            val key = "key"
+            val mutablePreferences = mockk<MutablePreferences>(relaxed = true)
+            coEvery { dataStore.edit(any()) } coAnswers {
+                val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
+                transform(mutablePreferences)
+                mutablePreferences
+            }
+
+            provider.delete(key)
+
+            verify { mutablePreferences.remove(any<Preferences.Key<String>>()) }
         }
 
-        provider.clear()
+    @Test
+    fun `clear should clear dataStore`() =
+        runTest {
+            val mutablePreferences = mockk<MutablePreferences>(relaxed = true)
+            coEvery { dataStore.edit(any()) } coAnswers {
+                val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
+                transform(mutablePreferences)
+                mutablePreferences
+            }
 
-        verify { mutablePreferences.clear() }
-    }
+            provider.clear()
+
+            verify { mutablePreferences.clear() }
+        }
 }

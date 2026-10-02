@@ -13,46 +13,48 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ManagementUseCaseTest {
-
     private val repository: EncryptionRepository = mockk()
-    
-    @Test
-    fun `InitializeLibraryUseCase should call repository initializeKey`() = runBlocking {
-        val useCase = InitializeLibraryUseCase(repository)
-        val alias = "test_alias"
-        val input = InitializeLibraryUseCase.Input(alias)
-        every { repository.initializeKey(any()) } just runs
-
-        val result = useCase(input)
-
-        assertTrue(result.isSuccess)
-        verify { repository.initializeKey(alias) }
-    }
 
     @Test
-    fun `DeleteKeyUseCase should call repository deleteKey`() = runBlocking {
-        val useCase = DeleteKeyUseCase(repository)
-        val alias = "test_alias"
-        val input = DeleteKeyUseCase.Input(alias)
-        every { repository.deleteKey(alias) } just runs
+    fun `InitializeLibraryUseCase should call repository initializeKey`() =
+        runBlocking {
+            val useCase = InitializeLibraryUseCase(repository)
+            val alias = "test_alias"
+            val input = InitializeLibraryUseCase.Input(alias)
+            every { repository.initializeKey(any()) } just runs
 
-        val result = useCase(input)
+            val result = useCase(input)
 
-        assertTrue(result.isSuccess)
-        verify { repository.deleteKey(alias) }
-    }
+            assertTrue(result.isSuccess)
+            verify { repository.initializeKey(alias) }
+        }
 
     @Test
-    fun `GetSecurityLevelUseCase should return level from repository`() = runBlocking {
-        val useCase = GetSecurityLevelUseCase(repository)
-        val alias = "test_alias"
-        val input = GetSecurityLevelUseCase.Input(alias)
-        every { repository.getSecurityLevel(alias) } returns SecurityLevel.STRONGBOX
+    fun `DeleteKeyUseCase should call repository deleteKey`() =
+        runBlocking {
+            val useCase = DeleteKeyUseCase(repository)
+            val alias = "test_alias"
+            val input = DeleteKeyUseCase.Input(alias)
+            every { repository.deleteKey(alias) } just runs
 
-        val result = useCase(input)
+            val result = useCase(input)
 
-        assertTrue(result.isSuccess)
-        assertEquals(SecurityLevel.STRONGBOX, result.getOrNull()?.level)
-        verify { repository.getSecurityLevel(alias) }
-    }
+            assertTrue(result.isSuccess)
+            verify { repository.deleteKey(alias) }
+        }
+
+    @Test
+    fun `GetSecurityLevelUseCase should return level from repository`() =
+        runBlocking {
+            val useCase = GetSecurityLevelUseCase(repository)
+            val alias = "test_alias"
+            val input = GetSecurityLevelUseCase.Input(alias)
+            every { repository.getSecurityLevel(alias) } returns SecurityLevel.STRONGBOX
+
+            val result = useCase(input)
+
+            assertTrue(result.isSuccess)
+            assertEquals(SecurityLevel.STRONGBOX, result.getOrNull()?.level)
+            verify { repository.getSecurityLevel(alias) }
+        }
 }

@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 internal class TinkDataSource(
     private val context: Context,
-    private val logger: LoggerKit
+    private val logger: LoggerKit,
 ) {
     companion object {
         private const val TAG = "TinkDataSource"
@@ -35,8 +35,8 @@ internal class TinkDataSource(
         }
     }
 
-    fun getAead(alias: String): Aead {
-        return aeadCache.getOrPut(alias) {
+    fun getAead(alias: String): Aead =
+        aeadCache.getOrPut(alias) {
             try {
                 createAead(alias)
             } catch (e: Exception) {
@@ -45,16 +45,17 @@ internal class TinkDataSource(
                 createAead(alias)
             }
         }
-    }
 
     private fun createAead(alias: String): Aead {
         try {
-            val keysetHandle = AndroidKeysetManager.Builder()
-                .withSharedPref(context, "keyset_$alias", "tink_prefs_$alias")
-                .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
-                .withMasterKeyUri("android-keystore://$alias")
-                .build()
-                .keysetHandle
+            val keysetHandle =
+                AndroidKeysetManager
+                    .Builder()
+                    .withSharedPref(context, "keyset_$alias", "tink_prefs_$alias")
+                    .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
+                    .withMasterKeyUri("android-keystore://$alias")
+                    .build()
+                    .keysetHandle
             return keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
         } catch (e: GeneralSecurityException) {
             logger.e(TAG, "Failed to initialize AndroidKeysetManager for alias $alias", e)
@@ -69,11 +70,15 @@ internal class TinkDataSource(
         logger.i(TAG, "Recovering Tink state for alias: $alias")
         runCatching {
             // 1. Clear SharedPreferences
-            context.getSharedPreferences("tink_prefs_$alias", Context.MODE_PRIVATE)
+            context
+                .getSharedPreferences("tink_prefs_$alias", Context.MODE_PRIVATE)
                 .edit { clear() }
 
             // 2. Delete from Keystore
-            val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            val keyStore =
+                java.security.KeyStore
+                    .getInstance("AndroidKeyStore")
+                    .apply { load(null) }
             if (keyStore.containsAlias(alias)) {
                 keyStore.deleteEntry(alias)
             }

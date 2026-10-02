@@ -7,20 +7,19 @@ import es.joshluq.foundationkit.usecase.UseCaseInput
 import es.joshluq.foundationkit.usecase.UseCaseOutput
 
 internal class EncryptSymmetricUseCase(
-    private val repository: EncryptionRepository
+    private val repository: EncryptionRepository,
 ) : UseCase<EncryptSymmetricUseCase.Input, EncryptSymmetricUseCase.Output> {
-
-    override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val result = repository.encryptSymmetric(input.data, input.alias, input.associatedData)
-        Output(result)
-    }
+    override suspend fun invoke(input: Input): Result<Output> =
+        runCatching {
+            val result = repository.encryptSymmetric(input.data, input.alias, input.associatedData)
+            Output(result)
+        }
 
     data class Input(
         val data: ByteArray,
         val alias: String,
-        val associatedData: ByteArray = ByteArray(0)
+        val associatedData: ByteArray = ByteArray(0),
     ) : UseCaseInput {
-
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -42,5 +41,7 @@ internal class EncryptSymmetricUseCase(
         }
     }
 
-    data class Output(val result: CryptoResult) : UseCaseOutput
+    data class Output(
+        val result: CryptoResult,
+    ) : UseCaseOutput
 }

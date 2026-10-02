@@ -9,8 +9,9 @@ import java.util.Arrays
  *
  * @property data The raw sensitive bytes.
  */
-class SecureBytes(val data: ByteArray) : AutoCloseable {
-
+class SecureBytes(
+    val data: ByteArray,
+) : AutoCloseable {
     /**
      * Wipes the data by overwriting the array with zeros.
      * This makes the data unrecoverable from memory.
@@ -23,7 +24,5 @@ class SecureBytes(val data: ByteArray) : AutoCloseable {
      * Checks if the data has been wiped (all zeros).
      * Note: This is a best-effort check, as valid data could technically be all zeros.
      */
-    fun isWiped(): Boolean {
-        return data.all { it == 0.toByte() }
-    }
+    fun isWiped(): Boolean = data.all { it == 0.toByte() }
 }
