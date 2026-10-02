@@ -7,14 +7,19 @@ import es.joshluq.foundationkit.usecase.UseCaseInput
 import es.joshluq.foundationkit.usecase.UseCaseOutput
 
 internal class GetSecurityLevelUseCase(
-    private val repository: EncryptionRepository
+    private val repository: EncryptionRepository,
 ) : UseCase<GetSecurityLevelUseCase.Input, GetSecurityLevelUseCase.Output> {
+    override suspend fun invoke(input: Input): Result<Output> =
+        runCatching {
+            val level = repository.getSecurityLevel(input.alias)
+            Output(level)
+        }
 
-    override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val level = repository.getSecurityLevel(input.alias)
-        Output(level)
-    }
+    data class Input(
+        val alias: String,
+    ) : UseCaseInput
 
-    data class Input(val alias: String) : UseCaseInput
-    data class Output(val level: SecurityLevel) : UseCaseOutput
+    data class Output(
+        val level: SecurityLevel,
+    ) : UseCaseOutput
 }

@@ -28,7 +28,6 @@ import javax.crypto.Cipher
 import javax.crypto.spec.OAEPParameterSpec
 
 class EncryptionRepositoryImplTest {
-
     private val context: Context = mockk(relaxed = true)
     private val tinkDataSource: TinkDataSource = mockk()
     private val certificatePathProvider: CertificatePathProvider = mockk()
@@ -93,10 +92,10 @@ class EncryptionRepositoryImplTest {
         val mockPrefs = mockk<SharedPreferences>(relaxed = true)
         val mockEditor = mockk<SharedPreferences.Editor>(relaxed = true)
         val mockKeystore = mockk<KeyStore>(relaxed = true)
-        
+
         every { context.getSharedPreferences(any(), any()) } returns mockPrefs
         every { mockPrefs.edit() } returns mockEditor
-        
+
         every { KeyStore.getInstance("AndroidKeyStore") } returns mockKeystore
         every { mockKeystore.containsAlias("alias") } returns true
 
@@ -122,65 +121,69 @@ class EncryptionRepositoryImplTest {
     }
 
     @Test
-    fun `getPublicKey should read certificate and return public key`() = runTest {
-        val tempFile = File.createTempFile("test_cert", ".crt")
-        tempFile.writeText("dummy cert")
-        every { certificatePathProvider.getCertificatePath() } returns tempFile.absolutePath
-        
-        mockkStatic(CertificateFactory::class)
-        val mockCertFactory = mockk<CertificateFactory>()
-        val mockCertificate = mockk<Certificate>()
-        val mockPublicKey = mockk<PublicKey>()
-        
-        every { CertificateFactory.getInstance("X.509") } returns mockCertFactory
-        every { mockCertFactory.generateCertificate(any()) } returns mockCertificate
-        every { mockCertificate.publicKey } returns mockPublicKey
+    fun `getPublicKey should read certificate and return public key`() =
+        runTest {
+            val tempFile = File.createTempFile("test_cert", ".crt")
+            tempFile.writeText("dummy cert")
+            every { certificatePathProvider.getCertificatePath() } returns tempFile.absolutePath
 
-        val result = repository.getPublicKey()
+            mockkStatic(CertificateFactory::class)
+            val mockCertFactory = mockk<CertificateFactory>()
+            val mockCertificate = mockk<Certificate>()
+            val mockPublicKey = mockk<PublicKey>()
 
-        assertEquals(mockPublicKey, result)
-        tempFile.delete()
-    }
+            every { CertificateFactory.getInstance("X.509") } returns mockCertFactory
+            every { mockCertFactory.generateCertificate(any()) } returns mockCertificate
+            every { mockCertificate.publicKey } returns mockPublicKey
+
+            val result = repository.getPublicKey()
+
+            assertEquals(mockPublicKey, result)
+            tempFile.delete()
+        }
 
     @Test(expected = CryptoException::class)
-    fun `getPublicKey should throw if file does not exist`() = runTest {
-        every { certificatePathProvider.getCertificatePath() } returns "non_existent_file_path_12345"
-        repository.getPublicKey()
-    }
+    fun `getPublicKey should throw if file does not exist`() =
+        runTest {
+            every { certificatePathProvider.getCertificatePath() } returns "non_existent_file_path_12345"
+            repository.getPublicKey()
+        }
 
     @Test
-    fun `encryptAsymmetric should use Cipher with OAEP`() = runTest {
-        val mockPublicKey: PublicKey = mockk()
-        val data = "secret".toByteArray()
-        val encrypted = "encrypted_secret".toByteArray()
+    fun `encryptAsymmetric should use Cipher with OAEP`() =
+        runTest {
+            val mockPublicKey: PublicKey = mockk()
+            val data = "secret".toByteArray()
+            val encrypted = "encrypted_secret".toByteArray()
 
-        mockkStatic(Cipher::class, MessageDigest::class)
-        val mockCipher = mockk<Cipher>()
-        val mockDigest = mockk<MessageDigest>()
+            mockkStatic(Cipher::class, MessageDigest::class)
+            val mockCipher = mockk<Cipher>()
+            val mockDigest = mockk<MessageDigest>()
 
-        // Mock public key and hashing
-        every { mockPublicKey.encoded } returns "key".toByteArray()
-        every { MessageDigest.getInstance("SHA-256") } returns mockDigest
-        every { mockDigest.digest(any()) } returns byteArrayOf(0x68, 0x61, 0x73, 0x68) // "hash" in hex is different but let's say it matches
+            // Mock public key and hashing
+            every { mockPublicKey.encoded } returns "key".toByteArray()
+            every { MessageDigest.getInstance("SHA-256") } returns mockDigest
+            // "hash" in hex is different but let's say it matches
+            every { mockDigest.digest(any()) } returns byteArrayOf(0x68, 0x61, 0x73, 0x68)
 
-        // Mock Repository.getPublicKey (it's internal, so we mock the certificate provider instead)
-        val tempFile = File.createTempFile("test_cert_2", ".crt")
-        every { certificatePathProvider.getCertificatePath() } returns tempFile.absolutePath
-        mockkStatic(CertificateFactory::class)
-        val mockCertFactory = mockk<CertificateFactory>()
-        val mockCertificate = mockk<Certificate>()
-        every { CertificateFactory.getInstance("X.509") } returns mockCertFactory
-        every { mockCertFactory.generateCertificate(any()) } returns mockCertificate
-        every { mockCertificate.publicKey } returns mockPublicKey
+            // Mock Repository.getPublicKey (it's internal, so we mock the certificate provider instead)
+            val tempFile = File.createTempFile("test_cert_2", ".crt")
+            every { certificatePathProvider.getCertificatePath() } returns tempFile.absolutePath
+            mockkStatic(CertificateFactory::class)
+            val mockCertFactory = mockk<CertificateFactory>()
+            val mockCertificate = mockk<Certificate>()
+            every { CertificateFactory.getInstance("X.509") } returns mockCertFactory
+            every { mockCertFactory.generateCertificate(any()) } returns mockCertificate
+            every { mockCertificate.publicKey } returns mockPublicKey
 
-        every { Cipher.getInstance("RSA/ECB/OAEPPadding") } returns mockCipher
-        every { mockCipher.init(Cipher.ENCRYPT_MODE, mockPublicKey, any<OAEPParameterSpec>()) } returns Unit
-        every { mockCipher.doFinal(data) } returns encrypted
+            every { Cipher.getInstance("RSA/ECB/OAEPPadding") } returns mockCipher
+            every { mockCipher.init(Cipher.ENCRYPT_MODE, mockPublicKey, any<OAEPParameterSpec>()) } returns Unit
+            every { mockCipher.doFinal(data) } returns encrypted
 
-        // Use a hash that will match our mocked digest output "68617368"
-        val result = repository.encryptAsymmetric(data, "68617368")
+            // Use a hash that will match our mocked digest output "68617368"
+            val result = repository.encryptAsymmetric(data, "68617368")
 
-        assertArrayEquals(encrypted, result)
-        tempFile.delete()
-    }
+            assertArrayEquals(encrypted, result)
+            tempFile.delete()
+        }
 }

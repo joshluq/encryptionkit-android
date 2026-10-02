@@ -15,10 +15,13 @@ import kotlinx.coroutines.flow.map
 internal class SecureDataStoreProvider(
     private val dataStore: DataStore<Preferences>,
     private val serializerProvider: SerializerProvider,
-    private val encryptionKit: EncryptionKit
+    private val encryptionKit: EncryptionKit,
 ) : StorageProvider {
-
-    override suspend fun <T : Any> save(key: String, value: T, type: Class<T>) {
+    override suspend fun <T : Any> save(
+        key: String,
+        value: T,
+        type: Class<T>,
+    ) {
         val serializedValue = serializerProvider.serialize(value, type)
         val secureBytes = SecureBytes(serializedValue.toByteArray(Charsets.UTF_8))
 
@@ -36,7 +39,10 @@ internal class SecureDataStoreProvider(
         }
     }
 
-    override suspend fun <T : Any> read(key: String, type: Class<T>): T? {
+    override suspend fun <T : Any> read(
+        key: String,
+        type: Class<T>,
+    ): T? {
         val prefKey = stringPreferencesKey(key)
         val base64String = dataStore.data.map { preferences -> preferences[prefKey] }.first() ?: return null
 

@@ -6,15 +6,15 @@ import es.joshluq.foundationkit.usecase.UseCase
 import es.joshluq.foundationkit.usecase.UseCaseInput
 
 internal class InitializeLibraryUseCase(
-    private val repository: EncryptionRepository
+    private val repository: EncryptionRepository,
 ) : UseCase<InitializeLibraryUseCase.Input, NoneOutput> {
-
-    override suspend fun invoke(input: Input): Result<NoneOutput> = runCatching {
-        repository.initializeKey(input.alias)
-        NoneOutput
-    }
+    override suspend fun invoke(input: Input): Result<NoneOutput> =
+        runCatching {
+            repository.initializeKey(input.alias)
+            NoneOutput
+        }
 
     data class Input(
-        val alias: String
+        val alias: String,
     ) : UseCaseInput
 }

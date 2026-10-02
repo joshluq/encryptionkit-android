@@ -27,17 +27,20 @@ data class EncryptionKitConfig(
 /**
  * Builder class for creating [EncryptionKitConfig] instances with Kotlin DSL support.
  */
-class EncryptionKitBuilder(override val context: Context) : ContextConfigBuilder<EncryptionKitConfig> {
+class EncryptionKitBuilder(
+    override val context: Context,
+) : ContextConfigBuilder<EncryptionKitConfig> {
     var alias: String = "encryption_kit_default_key"
     var publicKeyHash: String? = null
     var certificatePathProvider: CertificatePathProvider = EncryptionKitDefaults.emptyPathProvider
     var logger: LoggerKit = EncryptionKitDefaults.logger
 
-    override fun build() = EncryptionKitConfig(
-        alias = alias,
-        context = context,
-        publicKeyHash = publicKeyHash,
-        certificatePathProvider = certificatePathProvider,
-        logger = logger
-    )
+    override fun build() =
+        EncryptionKitConfig(
+            alias = alias,
+            context = context,
+            publicKeyHash = publicKeyHash,
+            certificatePathProvider = certificatePathProvider,
+            logger = logger,
+        )
 }

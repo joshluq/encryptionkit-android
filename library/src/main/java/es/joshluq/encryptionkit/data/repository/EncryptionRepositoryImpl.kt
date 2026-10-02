@@ -35,9 +35,8 @@ internal class EncryptionRepositoryImpl(
     private val tinkDataSource: TinkDataSource,
     private val certificatePathProvider: CertificatePathProvider,
     private val logger: LoggerKit,
-    private val context: Context
+    private val context: Context,
 ) : EncryptionRepository {
-
     companion object {
         private const val TAG = "EncryptionRepository"
     }
@@ -49,7 +48,11 @@ internal class EncryptionRepositoryImpl(
         tinkDataSource.getAead(alias)
     }
 
-    override fun encryptSymmetric(data: ByteArray, alias: String, associatedData: ByteArray): CryptoResult {
+    override fun encryptSymmetric(
+        data: ByteArray,
+        alias: String,
+        associatedData: ByteArray,
+    ): CryptoResult {
         logger.d(TAG, "Encrypting symmetric data with alias: $alias using Tink")
         try {
             val aead = tinkDataSource.getAead(alias)
@@ -61,7 +64,11 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override fun decryptSymmetric(ciphertext: ByteArray, alias: String, associatedData: ByteArray): ByteArray {
+    override fun decryptSymmetric(
+        ciphertext: ByteArray,
+        alias: String,
+        associatedData: ByteArray,
+    ): ByteArray {
         logger.d(TAG, "Decrypting symmetric data with alias: $alias using Tink")
         try {
             val aead = tinkDataSource.getAead(alias)
@@ -99,7 +106,8 @@ internal class EncryptionRepositoryImpl(
     override fun deleteKey(alias: String) {
         logger.d(TAG, "Deleting keyset and master key for alias: $alias")
         runCatching {
-            context.getSharedPreferences("tink_prefs_$alias", Context.MODE_PRIVATE)
+            context
+                .getSharedPreferences("tink_prefs_$alias", Context.MODE_PRIVATE)
                 .edit { clear() }
 
             val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -113,19 +121,20 @@ internal class EncryptionRepositoryImpl(
 
     override suspend fun getPublicKey(): PublicKey {
         logger.d(TAG, "Retrieving public key from certificate")
-        val path = certificatePathProvider.getCertificatePath()
-            ?: throw CryptoException(
-                "Certificate path not provided by consumer",
-                null,
-                CryptoException.Reason.CERTIFICATE_NOT_FOUND
-            )
+        val path =
+            certificatePathProvider.getCertificatePath()
+                ?: throw CryptoException(
+                    "Certificate path not provided by consumer",
+                    null,
+                    CryptoException.Reason.CERTIFICATE_NOT_FOUND,
+                )
 
         val file = File(path)
         if (!file.exists()) {
             throw CryptoException(
                 "Certificate file not found at: $path",
                 null,
-                CryptoException.Reason.CERTIFICATE_NOT_FOUND
+                CryptoException.Reason.CERTIFICATE_NOT_FOUND,
             )
         }
 
@@ -142,42 +151,47 @@ internal class EncryptionRepositoryImpl(
             throw CryptoException(
                 "Failed to parse certificate",
                 e,
-                CryptoException.Reason.OPERATION_FAILED
+                CryptoException.Reason.OPERATION_FAILED,
             )
         } catch (e: IOException) {
             logger.e(TAG, "Failed to read certificate file", e)
             throw CryptoException(
                 "Failed to read certificate file",
                 e,
-                CryptoException.Reason.OPERATION_FAILED
+                CryptoException.Reason.OPERATION_FAILED,
             )
         }
     }
 
-    override suspend fun encryptAsymmetric(data: ByteArray, publicKeyHash: String): ByteArray {
+    override suspend fun encryptAsymmetric(
+        data: ByteArray,
+        publicKeyHash: String,
+    ): ByteArray {
         logger.d(TAG, "Encrypting asymmetric data. Verifying public key hash...")
         try {
             val publicKey = getPublicKey()
 
-            val currentHash = hash(
-                publicKey.encoded,
-                "SHA-256"
-            ).joinToString("") { "%02x".format(it) }
+            val currentHash =
+                hash(
+                    publicKey.encoded,
+                    "SHA-256",
+                ).joinToString("") { "%02x".format(it) }
 
             if (!currentHash.equals(publicKeyHash, ignoreCase = true)) {
                 throw CryptoException(
                     "Public key validation failed. Expected: $publicKeyHash, Found: $currentHash",
-                    reason = CryptoException.Reason.PUBLIC_KEY_PINNING_FAILURE
+                    reason = CryptoException.Reason.PUBLIC_KEY_PINNING_FAILURE,
                 )
             }
 
             val cipher = Cipher.getInstance(rsaTransformation)
-            val oaepParams = OAEPParameterSpec(
-                "SHA-256",
-                "MGF1",
-                MGF1ParameterSpec.SHA256,
-                PSource.PSpecified.DEFAULT
-            )
+            val oaepParams =
+                OAEPParameterSpec(
+                    "SHA-256",
+                    "MGF1",
+                    MGF1ParameterSpec.SHA256,
+                    PSource.PSpecified.DEFAULT,
+                )
             cipher.init(Cipher.ENCRYPT_MODE, publicKey, oaepParams)
             return cipher.doFinal(data)
         } catch (e: GeneralSecurityException) {
@@ -189,7 +203,10 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override fun hash(data: ByteArray, algorithm: String): ByteArray {
+    override fun hash(
+        data: ByteArray,
+        algorithm: String,
+    ): ByteArray {
         logger.d(TAG, "Hashing data with algorithm: $algorithm")
         return try {
             MessageDigest.getInstance(algorithm).digest(data)
@@ -197,7 +214,7 @@ internal class EncryptionRepositoryImpl(
             throw CryptoException(
                 "Hash failed: algorithm $algorithm not found",
                 e,
-                CryptoException.Reason.OPERATION_FAILED
+                CryptoException.Reason.OPERATION_FAILED,
             )
         }
     }
@@ -208,7 +225,7 @@ internal class EncryptionRepositoryImpl(
         return CryptoException(
             e.message ?: "Unknown error",
             e,
-            CryptoException.Reason.UNKNOWN
+            CryptoException.Reason.UNKNOWN,
         )
     }
 }

@@ -33,18 +33,16 @@ import kotlinx.coroutines.launch
 class EncryptionKit internal constructor(
     private val componentFactory: (EncryptionKitConfig) -> EncryptionKitComponent = {
         EncryptionKitComponent(
-            it
+            it,
         )
-    }
+    },
 ) : Manager<EncryptionKitConfig>() {
-
     companion object : ContextManagerFactory<EncryptionKit, EncryptionKitConfig, EncryptionKitBuilder> {
         private const val TAG = "EncryptionKitManager"
 
         override val builder: ManagerBuilder<EncryptionKitConfig, EncryptionKit> = Builder()
 
-        override fun createBuilder(context: android.content.Context): EncryptionKitBuilder =
-            EncryptionKitBuilder(context)
+        override fun createBuilder(context: android.content.Context): EncryptionKitBuilder = EncryptionKitBuilder(context)
     }
 
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -53,9 +51,11 @@ class EncryptionKit internal constructor(
     /**
      * Supported hashing algorithms for the SDK.
      */
-    enum class HashAlgorithm(val value: String) {
+    enum class HashAlgorithm(
+        val value: String,
+    ) {
         SHA_256("SHA-256"),
-        MD5("MD5")
+        MD5("MD5"),
     }
 
     internal fun initialize(config: EncryptionKitConfig) {
@@ -74,13 +74,14 @@ class EncryptionKit internal constructor(
      */
     suspend fun encrypt(
         secureData: SecureBytes,
-        associatedData: ByteArray = ByteArray(0)
+        associatedData: ByteArray = ByteArray(0),
     ): Result<CryptoResult> {
         check(isConfigInitialized()) {
             "EncryptionKitManager is not initialized"
         }
         val input = EncryptSymmetricUseCase.Input(secureData.data, config.alias, associatedData)
-        return component.encryptSymmetricUseCase(input)
+        return component
+            .encryptSymmetricUseCase(input)
             .map { it.result }
             .mapFailure()
     }
@@ -90,13 +91,14 @@ class EncryptionKit internal constructor(
      */
     suspend fun decrypt(
         ciphertext: ByteArray,
-        associatedData: ByteArray = ByteArray(0)
+        associatedData: ByteArray = ByteArray(0),
     ): Result<SecureBytes> {
         check(isConfigInitialized()) {
             "EncryptionKitManager is not initialized"
         }
         val input = DecryptSymmetricUseCase.Input(ciphertext, config.alias, associatedData)
-        return component.decryptSymmetricUseCase(input)
+        return component
+            .decryptSymmetricUseCase(input)
             .map { SecureBytes(it.data) }
             .mapFailure()
     }
@@ -112,7 +114,8 @@ class EncryptionKit internal constructor(
             config.publicKeyHash ?: return Result.failure(Exception("Public key hash not set"))
 
         val input = EncryptAsymmetricUseCase.Input(data = data, publicKeyHash = publicKeyHash)
-        return component.encryptAsymmetricUseCase(input)
+        return component
+            .encryptAsymmetricUseCase(input)
             .map { it.data }
             .mapFailure()
     }
@@ -125,7 +128,8 @@ class EncryptionKit internal constructor(
             "EncryptionKitManager is not initialized"
         }
         val input = GetSecurityLevelUseCase.Input(config.alias)
-        return component.getSecurityLevelUseCase(input)
+        return component
+            .getSecurityLevelUseCase(input)
             .map { it.level }
             .mapFailure()
     }
@@ -138,7 +142,8 @@ class EncryptionKit internal constructor(
             "EncryptionKitManager is not initialized"
         }
         val input = DeleteKeyUseCase.Input(config.alias)
-        return component.deleteKeyUseCase(input)
+        return component
+            .deleteKeyUseCase(input)
             .map { }
             .mapFailure()
     }
@@ -148,9 +153,10 @@ class EncryptionKit internal constructor(
      */
     suspend fun hash(
         data: ByteArray,
-        algorithm: HashAlgorithm = HashAlgorithm.SHA_256
+        algorithm: HashAlgorithm = HashAlgorithm.SHA_256,
     ): Result<ByteArray> =
-        component.hashDataUseCase(HashDataUseCase.Input(data, algorithm.value))
+        component
+            .hashDataUseCase(HashDataUseCase.Input(data, algorithm.value))
             .map { it.data }
             .mapFailure()
 
@@ -159,9 +165,10 @@ class EncryptionKit internal constructor(
      */
     suspend fun hashToHex(
         text: String,
-        algorithm: HashAlgorithm = HashAlgorithm.SHA_256
+        algorithm: HashAlgorithm = HashAlgorithm.SHA_256,
     ): Result<String> =
-        component.hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm.value))
+        component
+            .hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm.value))
             .map { output -> output.data.joinToString("") { "%02x".format(it) } }
             .mapFailure()
 
@@ -170,7 +177,7 @@ class EncryptionKit internal constructor(
      */
     fun createSecureStorage(
         dataStore: DataStore<Preferences>,
-        serializerProvider: SerializerProvider
+        serializerProvider: SerializerProvider,
     ): StorageProvider {
         check(isConfigInitialized()) {
             "EncryptionKitManager is not initialized"
@@ -178,7 +185,7 @@ class EncryptionKit internal constructor(
         return SecureDataStoreProvider(
             dataStore = dataStore,
             serializerProvider = serializerProvider,
-            encryptionKit = this
+            encryptionKit = this,
         )
     }
 
@@ -189,22 +196,20 @@ class EncryptionKit internal constructor(
                 val exception = mapToCryptoException(it)
                 component.logger.e(TAG, "Operation failed: ${exception.message}", exception)
                 Result.failure(exception)
-            }
+            },
         )
 
-    private fun mapToCryptoException(e: Throwable): CryptoException {
-        return e as? CryptoException
+    private fun mapToCryptoException(e: Throwable): CryptoException =
+        e as? CryptoException
             ?: CryptoException(e.message ?: "Unknown error", e, CryptoException.Reason.UNKNOWN)
-    }
 
     /**
      * Builder class for creating [EncryptionKit] instances.
      */
     class Builder : ManagerBuilder<EncryptionKitConfig, EncryptionKit> {
-        override fun build(config: EncryptionKitConfig): EncryptionKit {
-            return EncryptionKit().apply {
+        override fun build(config: EncryptionKitConfig): EncryptionKit =
+            EncryptionKit().apply {
                 initialize(config)
             }
-        }
     }
 }

@@ -6,16 +6,18 @@ import es.joshluq.foundationkit.usecase.UseCaseInput
 import es.joshluq.foundationkit.usecase.UseCaseOutput
 
 internal class HashDataUseCase(
-    private val repository: EncryptionRepository
+    private val repository: EncryptionRepository,
 ) : UseCase<HashDataUseCase.Input, HashDataUseCase.Output> {
+    override suspend fun invoke(input: Input): Result<Output> =
+        runCatching {
+            val result = repository.hash(input.data, input.algorithm)
+            Output(result)
+        }
 
-    override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val result = repository.hash(input.data, input.algorithm)
-        Output(result)
-    }
-
-    data class Input(val data: ByteArray, val algorithm: String = "SHA-256") : UseCaseInput {
-
+    data class Input(
+        val data: ByteArray,
+        val algorithm: String = "SHA-256",
+    ) : UseCaseInput {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -35,8 +37,9 @@ internal class HashDataUseCase(
         }
     }
 
-    data class Output(val data: ByteArray) : UseCaseOutput {
-
+    data class Output(
+        val data: ByteArray,
+    ) : UseCaseOutput {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -48,8 +51,6 @@ internal class HashDataUseCase(
             return true
         }
 
-        override fun hashCode(): Int {
-            return data.contentHashCode()
-        }
+        override fun hashCode(): Int = data.contentHashCode()
     }
 }

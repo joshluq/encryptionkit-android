@@ -21,6 +21,7 @@ configure<ApplicationExtension> {
 
 dependencies {
     implementation(project(":encryptionkit"))
-    implementation("es.joshluq.kit:foundationkit:1.3.0")
+    implementation("es.joshluq.kit:foundationkit-core:2.0.0-SNAPSHOT")
+    implementation("es.joshluq.kit:foundationkit:2.0.0-SNAPSHOT")
     implementation(libs.androidx.datastore.preferences)
 }

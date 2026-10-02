@@ -6,20 +6,19 @@ import es.joshluq.foundationkit.usecase.UseCaseInput
 import es.joshluq.foundationkit.usecase.UseCaseOutput
 
 internal class DecryptSymmetricUseCase(
-    private val repository: EncryptionRepository
+    private val repository: EncryptionRepository,
 ) : UseCase<DecryptSymmetricUseCase.Input, DecryptSymmetricUseCase.Output> {
-
-    override suspend fun invoke(input: Input): Result<Output> = runCatching {
-        val result = repository.decryptSymmetric(input.ciphertext, input.alias, input.associatedData)
-        Output(result)
-    }
+    override suspend fun invoke(input: Input): Result<Output> =
+        runCatching {
+            val result = repository.decryptSymmetric(input.ciphertext, input.alias, input.associatedData)
+            Output(result)
+        }
 
     data class Input(
         val ciphertext: ByteArray,
         val alias: String,
-        val associatedData: ByteArray = ByteArray(0)
+        val associatedData: ByteArray = ByteArray(0),
     ) : UseCaseInput {
-
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -41,8 +40,9 @@ internal class DecryptSymmetricUseCase(
         }
     }
 
-    data class Output(val data: ByteArray) : UseCaseOutput {
-
+    data class Output(
+        val data: ByteArray,
+    ) : UseCaseOutput {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -50,8 +50,6 @@ internal class DecryptSymmetricUseCase(
             return data.contentEquals(other.data)
         }
 
-        override fun hashCode(): Int {
-            return data.contentHashCode()
-        }
+        override fun hashCode(): Int = data.contentHashCode()
     }
 }

@@ -16,8 +16,9 @@ import es.joshluq.foundationkit.log.LoggerKit
  * Internal Dependency Injection component
  * Following the Internal Dependency Graph pattern.
  */
-internal class EncryptionKitComponent(val config: EncryptionKitConfig) {
-
+internal class EncryptionKitComponent(
+    val config: EncryptionKitConfig,
+) {
     val logger: LoggerKit by lazy { config.logger }
 
     private val tinkDataSource: TinkDataSource by lazy {

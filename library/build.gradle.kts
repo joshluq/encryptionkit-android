@@ -4,6 +4,7 @@ import org.gradle.kotlin.dsl.configure
 plugins {
     alias(libs.plugins.pluginkit.android.library)
     alias(libs.plugins.pluginkit.quality)
+    alias(libs.plugins.pluginkit.formatting)
     alias(libs.plugins.pluginkit.android.testing)
     alias(libs.plugins.pluginkit.android.publishing)
 }
@@ -16,7 +17,8 @@ configure<LibraryExtension> {
 }
 
 dependencies {
-    implementation("es.joshluq.kit:foundationkit:1.4.0")
+    implementation("es.joshluq.kit:foundationkit-core:2.0.0-SNAPSHOT")
+    implementation("es.joshluq.kit:foundationkit:2.0.0-SNAPSHOT")
     implementation(libs.tink.android)
     implementation(libs.androidx.datastore.preferences)
 }
@@ -24,21 +26,22 @@ dependencies {
 pluginkitQuality {
     sonarHost = "https://sonarcloud.io"
     sonarProjectKey = "joshluq_encryptionkit-android"
-    koverExclusions = listOf(
-        "**.showcase.*",
-        "**.di.*",
-        "**.*_di_*",
-        "**.BuildConfig",
-        "**.R",
-        "**.R$*",
-        "**.Dagger*",
-        "**.*_Factory",
-        "**.*_Factory*",
-        "**.*_MembersInjector",
-        "**.*_HiltModules*",
-        "**.Hilt_*",
-        "**.*_Provide*Factory*"
-    )
+    koverExclusions =
+        listOf(
+            "**.showcase.*",
+            "**.di.*",
+            "**.*_di_*",
+            "**.BuildConfig",
+            "**.R",
+            "**.R$*",
+            "**.Dagger*",
+            "**.*_Factory",
+            "**.*_Factory*",
+            "**.*_MembersInjector",
+            "**.*_HiltModules*",
+            "**.Hilt_*",
+            "**.*_Provide*Factory*",
+        )
 }
 
 androidPublishing {
@@ -46,7 +49,7 @@ androidPublishing {
     repoUrl = "${providers.gradleProperty("repositoryUrl").get()}/${providers.gradleProperty("artifactId").get()}-android"
     repoUser = System.getenv("GITHUB_ACTOR")
     repoPassword = System.getenv("GITHUB_TOKEN")
-    version = "${project.version}${project.findProperty("versionType")}"
+    version = "${project.version}${project.findProperty("versionType") ?: ""}"
     groupId = project.group.toString()
     artifactId = providers.gradleProperty("artifactId").get()
 }
