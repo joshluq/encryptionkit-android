@@ -33,20 +33,3 @@ internal object EncryptionKitDefaults {
         }
     }
 }
-
-/**
- * Extension functions for [LoggerKit] to provide efficient logging with a standard tag.
- * Message lambda is only executed if it's necessary (handled by the provider's level check).
- */
-internal inline fun LoggerKit.v(message: () -> String) = v(EncryptionKitDefaults.TAG, message())
-
-internal inline fun LoggerKit.d(message: () -> String) = d(EncryptionKitDefaults.TAG, message())
-
-internal inline fun LoggerKit.i(message: () -> String) = i(EncryptionKitDefaults.TAG, message())
-
-internal inline fun LoggerKit.w(message: () -> String) = w(EncryptionKitDefaults.TAG, message())
-
-internal inline fun LoggerKit.e(
-    throwable: Throwable? = null,
-    message: () -> String,
-) = e(EncryptionKitDefaults.TAG, message(), throwable)

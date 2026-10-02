@@ -16,4 +16,10 @@ plugins {
 allprojects {
     group = providers.gradleProperty("groupId").get()
     version = "${providers.gradleProperty("libraryVersion").get()}${project.findProperty("versionType") ?: ""}"
+
+//    configurations.all {
+//        resolutionStrategy {
+//            cacheChangingModulesFor(0, "seconds")
+//        }
+//    }
 }

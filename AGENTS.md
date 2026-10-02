@@ -55,11 +55,11 @@ We **strictly prohibit** external DI frameworks (Dagger, Hilt, Koin). Use the In
 
 1. **Config (Public):** Mandatory `Context` (stored as `applicationContext`).
 2. **Component (Internal):** The DI container using `by lazy`.
-3. **Manager (Public):** Facade that initializes the component via DSL.
+3. **Facade / Manager (Public):** Facade that initializes the component via DSL (`EncryptionKit`).
 
 ### Recommended Initialization Pattern:
 ```kotlin
-val manager = EncryptionKitManager.build(context) {
+val encryptionKit = EncryptionKit.build(context) {
     alias = "secure_alias"
     // other config properties
 }
@@ -67,12 +67,13 @@ val manager = EncryptionKitManager.build(context) {
 
 ---
 
-## 4. Cybersecurity Constraints (Critical)
+## 4. Cybersecurity & Quality Constraints (Critical)
 - **Authenticated Encryption (AEAD):** Always use **AES-GCM (256-bit)** via Tink.
 - **Associated Data (AD):** When using `SecureDataStoreProvider`, always bind the ciphertext to its key using `associatedData`.
 - **Zero-Trust Memory:** Use `SecureBytes` for all sensitive payloads and call `close()` immediately after use.
 - **Context Handling:** Always use `context.applicationContext` in the Manager to prevent memory leaks.
 - **No Manual IVs:** Never allow the user to provide an IV; let Tink handle it.
+- **Efficient & Safe Logging:** Never log sensitive plaintext or keys. Always use `es.joshluq.foundationkit.log.LoggerKit` with lambdas (`logger.d { ... }`) to avoid string allocation when disabled.
 
 ---
 
@@ -81,7 +82,13 @@ When asked to add features:
 1. Identify if a new **DataSource** method or primitive is needed.
 2. Update the **UseCase** to handle the new operation (must be suspended).
 3. Register the dependency in `EncryptionKitComponent` (lazy).
-4. Expose the functionality in `EncryptionKitManager`.
+4. Expose the functionality in `EncryptionKit`.
 5. Ensure **Unit Tests** mock the `TinkDataSource` to avoid Keystore dependencies in JUnit.
 
-```utiliza la clase es.joshluq.foundationkit.log.LoggerKit para trazas eficientes con lambdas.```
+---
+
+## 6. Specialized Agent Skills
+The agent must consult and adhere to the specialized project skills in `.agent/skills/`:
+- **`encryptionkit-feature-scaffold`:** Follow this workflow step-by-step whenever creating or modifying cryptographic features or UseCases.
+- **`crypto-compliance-audit`:** Execute this audit checklist before committing code, submitting PRs, or reviewing security compliance (zero-trust memory, AEAD binding, Zero-DI).
+
