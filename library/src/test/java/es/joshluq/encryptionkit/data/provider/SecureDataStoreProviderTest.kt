@@ -79,6 +79,31 @@ class SecureDataStoreProviderTest {
         }
 
     @Test
+    fun `save should wipe secureBytes even if encryption fails`() =
+        runTest {
+            val key = "key"
+            val value = "value"
+            val serialized = "serialized"
+            var capturedSecureBytes: SecureBytes? = null
+
+            every { serializerProvider.serialize(value, String::class.java) } returns serialized
+            coEvery {
+                encryptionKit.encrypt(any(), any())
+            } answers {
+                capturedSecureBytes = firstArg()
+                Result.failure(RuntimeException("Encryption failed"))
+            }
+
+            try {
+                provider.save(key, value, String::class.java)
+            } catch (_: Exception) {
+            }
+
+            org.junit.Assert.assertNotNull(capturedSecureBytes)
+            org.junit.Assert.assertTrue(capturedSecureBytes!!.isWiped())
+        }
+
+    @Test
     fun `read should fetch from dataStore, decrypt with associated data and deserialize`() =
         runTest {
             val key = "key"

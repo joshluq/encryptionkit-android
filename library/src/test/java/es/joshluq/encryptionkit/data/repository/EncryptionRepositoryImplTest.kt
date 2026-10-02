@@ -1,8 +1,11 @@
 package es.joshluq.encryptionkit.data.repository
 
-import android.content.Context
-import android.content.SharedPreferences
 import com.google.crypto.tink.Aead
+import com.google.crypto.tink.DeterministicAead
+import com.google.crypto.tink.Mac
+import com.google.crypto.tink.PublicKeySign
+import com.google.crypto.tink.PublicKeyVerify
+import com.google.crypto.tink.StreamingAead
 import es.joshluq.encryptionkit.data.datasource.TinkDataSource
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
@@ -16,8 +19,12 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.KeyStore
 import java.security.MessageDigest
@@ -28,7 +35,6 @@ import javax.crypto.Cipher
 import javax.crypto.spec.OAEPParameterSpec
 
 class EncryptionRepositoryImplTest {
-    private val context: Context = mockk(relaxed = true)
     private val tinkDataSource: TinkDataSource = mockk()
     private val certificatePathProvider: CertificatePathProvider = mockk()
     private val logger: LoggerKit = mockk(relaxed = true)
@@ -36,7 +42,7 @@ class EncryptionRepositoryImplTest {
 
     @Before
     fun setUp() {
-        repository = EncryptionRepositoryImpl(tinkDataSource, certificatePathProvider, logger, context)
+        repository = EncryptionRepositoryImpl(tinkDataSource, certificatePathProvider, logger)
     }
 
     @After
@@ -87,22 +93,13 @@ class EncryptionRepositoryImplTest {
     }
 
     @Test
-    fun `deleteKey should clear shared prefs and keystore entry`() {
-        mockkStatic(KeyStore::class)
-        val mockPrefs = mockk<SharedPreferences>(relaxed = true)
-        val mockEditor = mockk<SharedPreferences.Editor>(relaxed = true)
-        val mockKeystore = mockk<KeyStore>(relaxed = true)
+    fun `deleteKey should delegate to tinkDataSource deleteAead`() {
+        val alias = "alias"
+        every { tinkDataSource.deleteAead(alias) } returns Unit
 
-        every { context.getSharedPreferences(any(), any()) } returns mockPrefs
-        every { mockPrefs.edit() } returns mockEditor
+        repository.deleteKey(alias)
 
-        every { KeyStore.getInstance("AndroidKeyStore") } returns mockKeystore
-        every { mockKeystore.containsAlias("alias") } returns true
-
-        repository.deleteKey("alias")
-
-        verify { mockEditor.clear() }
-        verify { mockKeystore.deleteEntry("alias") }
+        verify { tinkDataSource.deleteAead(alias) }
     }
 
     @Test
@@ -186,4 +183,172 @@ class EncryptionRepositoryImplTest {
             assertArrayEquals(encrypted, result)
             tempFile.delete()
         }
+
+    @Test
+    fun `encryptStream should stream data through Tink StreamingAead`() {
+        val mockStreamingAead: StreamingAead = mockk()
+        val alias = "stream_alias"
+        val data = "streaming data".toByteArray()
+        val associatedData = "ad".toByteArray()
+        val inStream = ByteArrayInputStream(data)
+        val outStream = ByteArrayOutputStream()
+        val encryptingStream = ByteArrayOutputStream()
+
+        every { tinkDataSource.getStreamingAead(alias) } returns mockStreamingAead
+        every { mockStreamingAead.newEncryptingStream(outStream, associatedData) } returns encryptingStream
+
+        repository.encryptStream(inStream, outStream, alias, associatedData)
+
+        assertArrayEquals(data, encryptingStream.toByteArray())
+    }
+
+    @Test
+    fun `decryptStream should stream data through Tink StreamingAead`() {
+        val mockStreamingAead: StreamingAead = mockk()
+        val alias = "stream_alias"
+        val data = "decrypted data".toByteArray()
+        val associatedData = "ad".toByteArray()
+        val inStream = ByteArrayInputStream("ciphertext".toByteArray())
+        val outStream = ByteArrayOutputStream()
+        val decryptingStream = ByteArrayInputStream(data)
+
+        every { tinkDataSource.getStreamingAead(alias) } returns mockStreamingAead
+        every { mockStreamingAead.newDecryptingStream(inStream, associatedData) } returns decryptingStream
+
+        repository.decryptStream(inStream, outStream, alias, associatedData)
+
+        assertArrayEquals(data, outStream.toByteArray())
+    }
+
+    @Test
+    fun `encryptDeterministic should return CryptoResult when successful`() {
+        val mockDaead: DeterministicAead = mockk()
+        val alias = "daead_alias"
+        val data = "data".toByteArray()
+        val associatedData = "ad".toByteArray()
+        val encrypted = "encrypted_deterministic".toByteArray()
+
+        every { tinkDataSource.getDeterministicAead(alias) } returns mockDaead
+        every { mockDaead.encryptDeterministically(data, associatedData) } returns encrypted
+
+        val result = repository.encryptDeterministic(data, alias, associatedData)
+
+        assertArrayEquals(encrypted, result.ciphertext)
+    }
+
+    @Test
+    fun `decryptDeterministic should return decrypted data`() {
+        val mockDaead: DeterministicAead = mockk()
+        val alias = "daead_alias"
+        val ciphertext = "encrypted_deterministic".toByteArray()
+        val associatedData = "ad".toByteArray()
+        val decrypted = "data".toByteArray()
+
+        every { tinkDataSource.getDeterministicAead(alias) } returns mockDaead
+        every { mockDaead.decryptDeterministically(ciphertext, associatedData) } returns decrypted
+
+        val result = repository.decryptDeterministic(ciphertext, alias, associatedData)
+
+        assertArrayEquals(decrypted, result)
+    }
+
+    @Test
+    fun `rotateKey should delegate to tinkDataSource rotateAead`() {
+        val alias = "alias"
+        every { tinkDataSource.rotateAead(alias) } returns Unit
+
+        repository.rotateKey(alias)
+
+        verify { tinkDataSource.rotateAead(alias) }
+    }
+
+    @Test
+    fun `sign should call tinkDataSource getPublicKeySign and return signature`() {
+        val mockSigner: PublicKeySign = mockk()
+        val alias = "sign_alias"
+        val data = "payload".toByteArray()
+        val signature = "signature".toByteArray()
+
+        every { tinkDataSource.getPublicKeySign(alias) } returns mockSigner
+        every { mockSigner.sign(data) } returns signature
+
+        val result = repository.sign(data, alias)
+
+        assertArrayEquals(signature, result)
+    }
+
+    @Test
+    fun `verifySignature should return true when signature is valid`() {
+        val mockVerifier: PublicKeyVerify = mockk()
+        val alias = "sign_alias"
+        val data = "payload".toByteArray()
+        val signature = "signature".toByteArray()
+
+        every { tinkDataSource.getPublicKeyVerify(alias) } returns mockVerifier
+        every { mockVerifier.verify(signature, data) } returns Unit
+
+        val result = repository.verifySignature(data, signature, alias)
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun `verifySignature should return false when signature verification fails`() {
+        val mockVerifier: PublicKeyVerify = mockk()
+        val alias = "sign_alias"
+        val data = "payload".toByteArray()
+        val signature = "invalid_signature".toByteArray()
+
+        every { tinkDataSource.getPublicKeyVerify(alias) } returns mockVerifier
+        every { mockVerifier.verify(signature, data) } throws java.security.GeneralSecurityException("Invalid signature")
+
+        val result = repository.verifySignature(data, signature, alias)
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `computeMac should call tinkDataSource getMac and return tag`() {
+        val mockMac: Mac = mockk()
+        val alias = "mac_alias"
+        val data = "payload".toByteArray()
+        val tag = "mac_tag".toByteArray()
+
+        every { tinkDataSource.getMac(alias) } returns mockMac
+        every { mockMac.computeMac(data) } returns tag
+
+        val result = repository.computeMac(data, alias)
+
+        assertArrayEquals(tag, result)
+    }
+
+    @Test
+    fun `verifyMac should return true when MAC is valid`() {
+        val mockMac: Mac = mockk()
+        val alias = "mac_alias"
+        val data = "payload".toByteArray()
+        val tag = "mac_tag".toByteArray()
+
+        every { tinkDataSource.getMac(alias) } returns mockMac
+        every { mockMac.verifyMac(tag, data) } returns Unit
+
+        val result = repository.verifyMac(data, tag, alias)
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun `verifyMac should return false when MAC verification fails`() {
+        val mockMac: Mac = mockk()
+        val alias = "mac_alias"
+        val data = "payload".toByteArray()
+        val tag = "invalid_tag".toByteArray()
+
+        every { tinkDataSource.getMac(alias) } returns mockMac
+        every { mockMac.verifyMac(tag, data) } throws java.security.GeneralSecurityException("Tag mismatch")
+
+        val result = repository.verifyMac(data, tag, alias)
+
+        assertFalse(result)
+    }
 }

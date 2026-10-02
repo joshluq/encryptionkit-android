@@ -33,3 +33,44 @@ internal object EncryptionKitDefaults {
         }
     }
 }
+
+/**
+ * Extension functions for [LoggerKit] to provide efficient logging with a tag and lambda message.
+ * Message lambda avoids string allocation if logging is disabled.
+ */
+internal inline fun LoggerKit.v(
+    tag: String = EncryptionKitDefaults.TAG,
+    message: () -> String,
+) = v(tag, message())
+
+internal inline fun LoggerKit.d(
+    tag: String = EncryptionKitDefaults.TAG,
+    message: () -> String,
+) = d(tag, message())
+
+internal inline fun LoggerKit.i(
+    tag: String = EncryptionKitDefaults.TAG,
+    message: () -> String,
+) = i(tag, message())
+
+internal inline fun LoggerKit.w(
+    tag: String = EncryptionKitDefaults.TAG,
+    throwable: Throwable? = null,
+    message: () -> String,
+) = w(tag, message(), throwable)
+
+internal inline fun LoggerKit.w(
+    throwable: Throwable,
+    message: () -> String,
+) = w(EncryptionKitDefaults.TAG, message(), throwable)
+
+internal inline fun LoggerKit.e(
+    tag: String = EncryptionKitDefaults.TAG,
+    throwable: Throwable? = null,
+    message: () -> String,
+) = e(tag, message(), throwable)
+
+internal inline fun LoggerKit.e(
+    throwable: Throwable,
+    message: () -> String,
+) = e(EncryptionKitDefaults.TAG, message(), throwable)
