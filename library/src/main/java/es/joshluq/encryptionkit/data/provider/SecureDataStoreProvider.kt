@@ -23,16 +23,15 @@ internal class SecureDataStoreProvider(
         type: Class<T>,
     ) {
         val serializedValue = serializerProvider.serialize(value, type)
-        val secureBytes = SecureBytes(serializedValue.toByteArray(Charsets.UTF_8))
-
         // Use the preference key as associated data for extra security
         val associatedData = key.toByteArray(Charsets.UTF_8)
 
-        val encryptionResult = encryptionKit.encrypt(secureBytes, associatedData).getOrThrow()
-        val encryptedBytes = encryptionResult.ciphertext
-        val base64String = Base64.encodeToString(encryptedBytes, Base64.NO_WRAP)
+        val base64String =
+            SecureBytes(serializedValue.toByteArray(Charsets.UTF_8)).use { secureBytes ->
+                val encryptionResult = encryptionKit.encrypt(secureBytes, associatedData).getOrThrow()
+                Base64.encodeToString(encryptionResult.ciphertext, Base64.NO_WRAP)
+            }
         val prefKey = stringPreferencesKey(key)
-        secureBytes.close()
 
         dataStore.edit { preferences ->
             preferences[prefKey] = base64String
@@ -59,9 +58,10 @@ internal class SecureDataStoreProvider(
             return null
         }
 
-        val decryptedSecureBytes = decryptionResult.getOrThrow()
-        val decryptedString = String(decryptedSecureBytes.data, Charsets.UTF_8)
-        decryptedSecureBytes.close()
+        val decryptedString =
+            decryptionResult.getOrThrow().use { decryptedSecureBytes ->
+                String(decryptedSecureBytes.data, Charsets.UTF_8)
+            }
         return serializerProvider.deserialize(decryptedString, type)
     }
 
