@@ -42,9 +42,7 @@ class EncryptedByteArrayConverter(
                 } else {
                     encryptionKit.decrypt(ciphertext, associatedData)
                 }
-            result.getOrThrow().use { secureBytes ->
-                secureBytes.data.copyOf()
-            }
+            result.getOrThrow().data
         }
     }
 }

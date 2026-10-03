@@ -25,19 +25,24 @@ import es.joshluq.encryptionkit.domain.usecase.SignDataUseCase
 import es.joshluq.encryptionkit.domain.usecase.VerifyMacUseCase
 import es.joshluq.encryptionkit.domain.usecase.VerifySignatureUseCase
 import es.joshluq.foundationkit.provider.SerializerProvider
+import es.joshluq.foundationkit.testing.coroutines.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 class EncryptionKitTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val component: EncryptionKitComponent = mockk()
     private val initializeLibraryUseCase: InitializeLibraryUseCase = mockk(relaxed = true)
     private val encryptSymmetricUseCase: EncryptSymmetricUseCase = mockk()
@@ -92,7 +97,7 @@ class EncryptionKitTest {
 
     @Test
     fun `encrypt should return success result when successful`() =
-        runBlocking {
+        runTest {
             val data = byteArrayOf(1, 2, 3)
             val associatedData = "ad".toByteArray()
             val secureBytes = SecureBytes(data)
@@ -109,7 +114,7 @@ class EncryptionKitTest {
 
     @Test
     fun `decrypt should return success result when successful`() =
-        runBlocking {
+        runTest {
             val ciphertext = "cipher".toByteArray()
             val associatedData = "ad".toByteArray()
             val expectedPlaintext = "plain".toByteArray()
@@ -125,7 +130,7 @@ class EncryptionKitTest {
 
     @Test
     fun `encryptWithPublicKey should return success result when successful`() =
-        runBlocking {
+        runTest {
             val data = "data".toByteArray()
             val expectedCiphertext = "cipher_asym".toByteArray()
 
@@ -143,7 +148,7 @@ class EncryptionKitTest {
 
     @Test
     fun `getSecurityLevel should return success result when successful`() =
-        runBlocking {
+        runTest {
             val expectedLevel = SecurityLevel.STRONGBOX
 
             coEvery { getSecurityLevelUseCase(any()) } returns Result.success(GetSecurityLevelUseCase.Output(expectedLevel))
@@ -156,7 +161,7 @@ class EncryptionKitTest {
 
     @Test
     fun `deleteKey should return success when successful`() =
-        runBlocking {
+        runTest {
             coEvery { deleteKeyUseCase(any()) } returns Result.success(es.joshluq.foundationkit.usecase.NoneOutput)
 
             val result = manager.deleteKey()
@@ -166,7 +171,7 @@ class EncryptionKitTest {
 
     @Test
     fun `hash should return success result when successful`() =
-        runBlocking {
+        runTest {
             val data = byteArrayOf(1, 2, 3)
             val expectedHash = byteArrayOf(4, 5, 6)
 
@@ -180,7 +185,7 @@ class EncryptionKitTest {
 
     @Test
     fun `hashToHex should return hex string result`() =
-        runBlocking {
+        runTest {
             val text = "test"
             val mockHash = byteArrayOf(0x00, 0xff.toByte())
 
@@ -194,7 +199,7 @@ class EncryptionKitTest {
 
     @Test
     fun `any function should return failure when use case fails`() =
-        runBlocking {
+        runTest {
             val secureBytes = SecureBytes("data".toByteArray())
             val exception = Exception("Encryption failed")
 
@@ -219,7 +224,7 @@ class EncryptionKitTest {
 
     @Test
     fun `encryptStream should return success result when successful`() =
-        runBlocking {
+        runTest {
             val inStream = ByteArrayInputStream("test".toByteArray())
             val outStream = ByteArrayOutputStream()
             val associatedData = "ad".toByteArray()
@@ -233,7 +238,7 @@ class EncryptionKitTest {
 
     @Test
     fun `decryptStream should return success result when successful`() =
-        runBlocking {
+        runTest {
             val inStream = ByteArrayInputStream("test".toByteArray())
             val outStream = ByteArrayOutputStream()
             val associatedData = "ad".toByteArray()
@@ -247,7 +252,7 @@ class EncryptionKitTest {
 
     @Test
     fun `encryptDeterministic should return success result when successful`() =
-        runBlocking {
+        runTest {
             val data = byteArrayOf(1, 2, 3)
             val associatedData = "ad".toByteArray()
             val secureBytes = SecureBytes(data)
@@ -264,7 +269,7 @@ class EncryptionKitTest {
 
     @Test
     fun `decryptDeterministic should return success result when successful`() =
-        runBlocking {
+        runTest {
             val ciphertext = "cipher".toByteArray()
             val associatedData = "ad".toByteArray()
             val expectedPlaintext = "plain".toByteArray()
@@ -280,7 +285,7 @@ class EncryptionKitTest {
 
     @Test
     fun `rotateKey should return success result when successful`() =
-        runBlocking {
+        runTest {
             coEvery { rotateKeyUseCase(any()) } returns Result.success(es.joshluq.foundationkit.usecase.NoneOutput)
 
             val result = manager.rotateKey()
@@ -290,7 +295,7 @@ class EncryptionKitTest {
 
     @Test
     fun `rotateKey with custom alias should pass alias to usecase`() =
-        runBlocking {
+        runTest {
             val customAlias = "custom_key_alias"
             coEvery { rotateKeyUseCase(RotateKeyUseCase.Input(customAlias)) } returns
                 Result.success(es.joshluq.foundationkit.usecase.NoneOutput)
@@ -314,7 +319,7 @@ class EncryptionKitTest {
 
     @Test
     fun `sign should return signature bytes on success`() =
-        runBlocking {
+        runTest {
             val data = "payload".toByteArray()
             val expectedSignature = "signature".toByteArray()
 
@@ -328,7 +333,7 @@ class EncryptionKitTest {
 
     @Test
     fun `verifySignature should return boolean on success`() =
-        runBlocking {
+        runTest {
             val data = "payload".toByteArray()
             val signature = "signature".toByteArray()
 
@@ -342,7 +347,7 @@ class EncryptionKitTest {
 
     @Test
     fun `computeMac should return MAC tag bytes on success`() =
-        runBlocking {
+        runTest {
             val data = "payload".toByteArray()
             val expectedTag = "mac_tag".toByteArray()
 
@@ -356,7 +361,7 @@ class EncryptionKitTest {
 
     @Test
     fun `verifyMac should return boolean on success`() =
-        runBlocking {
+        runTest {
             val data = "payload".toByteArray()
             val mac = "mac_tag".toByteArray()
 

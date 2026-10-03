@@ -8,6 +8,7 @@ import es.joshluq.encryptionkit.di.e
 import es.joshluq.encryptionkit.di.i
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
+import es.joshluq.encryptionkit.domain.model.HexUtils
 import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.usecase.ComputeMacUseCase
@@ -200,7 +201,7 @@ class EncryptionKit internal constructor(
     ): Result<String> =
         component
             .hashDataUseCase(HashDataUseCase.Input(text.toByteArray(), algorithm.value))
-            .map { output -> output.data.joinToString("") { "%02x".format(it) } }
+            .map { output -> HexUtils.encode(output.data) }
             .mapFailure()
 
     /**

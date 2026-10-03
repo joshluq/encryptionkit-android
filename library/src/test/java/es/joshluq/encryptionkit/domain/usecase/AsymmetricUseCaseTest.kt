@@ -2,15 +2,20 @@ package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.SecureBytes
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import es.joshluq.foundationkit.testing.coroutines.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class AsymmetricUseCaseTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val repository: EncryptionRepository = mockk()
     private val useCase = EncryptAsymmetricUseCase(repository)
 
@@ -20,7 +25,7 @@ class AsymmetricUseCaseTest {
 
     @Test
     fun `invoke should call repository encryptAsymmetric`() =
-        runBlocking {
+        runTest {
             // Given
             coEvery { repository.encryptAsymmetric(data, publicKeyHash) } returns encrypted
             val input = EncryptAsymmetricUseCase.Input(data = data, publicKeyHash = publicKeyHash)
@@ -36,7 +41,7 @@ class AsymmetricUseCaseTest {
 
     @Test
     fun `invoke with SecureBytes should use raw data`() =
-        runBlocking {
+        runTest {
             // Given
             val secure = SecureBytes(data.copyOf())
             coEvery { repository.encryptAsymmetric(any(), publicKeyHash) } returns encrypted

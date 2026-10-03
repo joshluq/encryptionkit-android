@@ -11,7 +11,7 @@ data class CryptoResult(
     /**
      * Converts the ciphertext to a Hexadecimal string.
      */
-    fun toHexString(): String = ciphertext.joinToString("") { "%02x".format(it) }
+    fun toHexString(): String = HexUtils.encode(ciphertext)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
