@@ -6,7 +6,6 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class HexUtilsTest {
-
     @Test
     fun `encode should return empty string for empty byte array`() {
         val result = HexUtils.encode(byteArrayOf())
