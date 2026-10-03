@@ -15,7 +15,6 @@ import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import es.joshluq.foundationkit.log.LoggerKit
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -29,6 +28,7 @@ import java.security.PublicKey
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.spec.MGF1ParameterSpec
+import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
