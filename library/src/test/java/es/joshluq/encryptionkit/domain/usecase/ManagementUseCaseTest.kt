@@ -2,22 +2,27 @@ package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import es.joshluq.foundationkit.testing.coroutines.MainDispatcherRule
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class ManagementUseCaseTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val repository: EncryptionRepository = mockk()
 
     @Test
     fun `InitializeLibraryUseCase should call repository initializeKey`() =
-        runBlocking {
+        runTest {
             val useCase = InitializeLibraryUseCase(repository)
             val alias = "test_alias"
             val input = InitializeLibraryUseCase.Input(alias)
@@ -31,7 +36,7 @@ class ManagementUseCaseTest {
 
     @Test
     fun `DeleteKeyUseCase should call repository deleteKey`() =
-        runBlocking {
+        runTest {
             val useCase = DeleteKeyUseCase(repository)
             val alias = "test_alias"
             val input = DeleteKeyUseCase.Input(alias)
@@ -45,7 +50,7 @@ class ManagementUseCaseTest {
 
     @Test
     fun `GetSecurityLevelUseCase should return level from repository`() =
-        runBlocking {
+        runTest {
             val useCase = GetSecurityLevelUseCase(repository)
             val alias = "test_alias"
             val input = GetSecurityLevelUseCase.Input(alias)

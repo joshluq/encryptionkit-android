@@ -1,21 +1,26 @@
 package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import es.joshluq.foundationkit.testing.coroutines.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class HashDataUseCaseTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val repository: EncryptionRepository = mockk()
     private val useCase = HashDataUseCase(repository)
 
     @Test
     fun `invoke should call repository hash with correct algorithm`() =
-        runBlocking {
+        runTest {
             // Given
             val data = "test".toByteArray()
             val expectedHash = "hash".toByteArray()

@@ -2,16 +2,21 @@ package es.joshluq.encryptionkit.domain.usecase
 
 import es.joshluq.encryptionkit.domain.model.CryptoResult
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
+import es.joshluq.foundationkit.testing.coroutines.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class SymmetricUseCaseTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val repository: EncryptionRepository = mockk()
     private val encryptUseCase = EncryptSymmetricUseCase(repository)
     private val decryptUseCase = DecryptSymmetricUseCase(repository)
@@ -23,7 +28,7 @@ class SymmetricUseCaseTest {
 
     @Test
     fun `EncryptSymmetricUseCase should delegate to repository`() =
-        runBlocking {
+        runTest {
             // Given
             val alias = "test_alias"
             every { repository.encryptSymmetric(data, alias, associatedData) } returns cryptoResult
@@ -40,7 +45,7 @@ class SymmetricUseCaseTest {
 
     @Test
     fun `DecryptSymmetricUseCase should delegate to repository`() =
-        runBlocking {
+        runTest {
             // Given
             val alias = "test_alias"
             every { repository.decryptSymmetric(ciphertext, alias, associatedData) } returns data

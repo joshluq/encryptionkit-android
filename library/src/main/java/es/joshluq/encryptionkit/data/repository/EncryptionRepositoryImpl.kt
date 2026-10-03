@@ -10,10 +10,12 @@ import es.joshluq.encryptionkit.di.i
 import es.joshluq.encryptionkit.di.w
 import es.joshluq.encryptionkit.domain.model.CryptoException
 import es.joshluq.encryptionkit.domain.model.CryptoResult
+import es.joshluq.encryptionkit.domain.model.HexUtils
 import es.joshluq.encryptionkit.domain.model.SecurityLevel
 import es.joshluq.encryptionkit.domain.provider.CertificatePathProvider
 import es.joshluq.encryptionkit.domain.repository.EncryptionRepository
 import es.joshluq.foundationkit.log.LoggerKit
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -40,8 +42,10 @@ internal class EncryptionRepositoryImpl(
 ) : EncryptionRepository {
     companion object {
         private const val TAG = "EncryptionRepository"
+        private const val STREAM_BUFFER_SIZE = 64 * 1024
     }
 
+    private val securityLevelCache = ConcurrentHashMap<String, SecurityLevel>()
     private val rsaTransformation = "RSA/ECB/OAEPPadding"
 
     override fun initializeKey(alias: String) {
@@ -80,32 +84,34 @@ internal class EncryptionRepositoryImpl(
         }
     }
 
-    override fun getSecurityLevel(alias: String): SecurityLevel {
-        logger.d(TAG) { "Getting security level for Tink master key alias: $alias" }
-        return runCatching {
-            val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-            val key = keyStore.getKey(alias, null) as? SecretKey ?: return SecurityLevel.SOFTWARE
+    override fun getSecurityLevel(alias: String): SecurityLevel =
+        securityLevelCache.getOrPut(alias) {
+            logger.d(TAG) { "Getting security level for Tink master key alias: $alias" }
+            runCatching {
+                val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                val key = keyStore.getKey(alias, null) as? SecretKey ?: return@getOrPut SecurityLevel.SOFTWARE
 
-            val factory = SecretKeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
-            val keyInfo = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
+                val factory = SecretKeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
+                val keyInfo = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                when (keyInfo.securityLevel) {
-                    KeyProperties.SECURITY_LEVEL_STRONGBOX -> SecurityLevel.STRONGBOX
-                    KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT -> SecurityLevel.TRUSTED_ENVIRONMENT
-                    else -> SecurityLevel.SOFTWARE
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    when (keyInfo.securityLevel) {
+                        KeyProperties.SECURITY_LEVEL_STRONGBOX -> SecurityLevel.STRONGBOX
+                        KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT -> SecurityLevel.TRUSTED_ENVIRONMENT
+                        else -> SecurityLevel.SOFTWARE
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    if (keyInfo.isInsideSecureHardware) SecurityLevel.TRUSTED_ENVIRONMENT else SecurityLevel.SOFTWARE
                 }
-            } else {
-                @Suppress("DEPRECATION")
-                if (keyInfo.isInsideSecureHardware) SecurityLevel.TRUSTED_ENVIRONMENT else SecurityLevel.SOFTWARE
-            }
-        }.onFailure { e ->
-            logger.e(TAG, e) { "Failed to determine security level" }
-        }.getOrDefault(SecurityLevel.SOFTWARE)
-    }
+            }.onFailure { e ->
+                logger.e(TAG, e) { "Failed to determine security level" }
+            }.getOrDefault(SecurityLevel.SOFTWARE)
+        }
 
     override fun deleteKey(alias: String) {
         logger.d(TAG) { "Deleting keyset and master key for alias: $alias" }
+        securityLevelCache.remove(alias)
         tinkDataSource.deleteAead(alias)
     }
 
@@ -162,10 +168,12 @@ internal class EncryptionRepositoryImpl(
             val publicKey = getPublicKey()
 
             val currentHash =
-                hash(
-                    publicKey.encoded,
-                    "SHA-256",
-                ).joinToString("") { "%02x".format(it) }
+                HexUtils.encode(
+                    hash(
+                        publicKey.encoded,
+                        "SHA-256",
+                    ),
+                )
 
             if (!currentHash.equals(publicKeyHash, ignoreCase = true)) {
                 throw CryptoException(
@@ -219,7 +227,7 @@ internal class EncryptionRepositoryImpl(
         try {
             val streamingAead = tinkDataSource.getStreamingAead(alias)
             streamingAead.newEncryptingStream(outputStream, associatedData).use { encryptingStream ->
-                inputStream.copyTo(encryptingStream)
+                inputStream.copyTo(encryptingStream, bufferSize = STREAM_BUFFER_SIZE)
             }
         } catch (e: GeneralSecurityException) {
             logger.e(TAG, e) { "Streaming encryption failed for alias: $alias" }
@@ -240,7 +248,7 @@ internal class EncryptionRepositoryImpl(
         try {
             val streamingAead = tinkDataSource.getStreamingAead(alias)
             streamingAead.newDecryptingStream(inputStream, associatedData).use { decryptingStream ->
-                decryptingStream.copyTo(outputStream)
+                decryptingStream.copyTo(outputStream, bufferSize = STREAM_BUFFER_SIZE)
             }
         } catch (e: GeneralSecurityException) {
             logger.e(TAG, e) { "Streaming decryption failed for alias: $alias" }
